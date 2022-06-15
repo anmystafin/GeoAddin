@@ -21,13 +21,17 @@ namespace GeoAddin
         public Result OnStartup(UIControlledApplication a)
         {
             string tabName = "ООО Георекон";
+
             string archpanelName = "Архитектура";
             a.CreateRibbonTab(tabName);
-            var panel = a.CreateRibbonPanel(tabName,archpanelName);
+            var archpanel = a.CreateRibbonPanel(tabName,archpanelName);
+
+            string commonpanelName = "Общее";
+            var commonpanel = a.CreateRibbonPanel(tabName, commonpanelName);
 
             //Создание кнопки генерациии помещений
             var ApartGenButton = new PushButtonData("Генерация помещений", "Генерация помещений", Assembly.GetExecutingAssembly().Location, "GeoAddin.RoomGenerating");
-            var ApartGenPushBtn = panel.AddItem(ApartGenButton) as PushButton;
+            var ApartGenPushBtn = archpanel.AddItem(ApartGenButton) as PushButton;
             Image RoomGenPic = Properties.Resources.RoomGenPic;
             ImageSource RoomGenPicSrc = Convert(RoomGenPic);
             ApartGenPushBtn.LargeImage = RoomGenPicSrc;
@@ -35,7 +39,7 @@ namespace GeoAddin
 
             //Создание кнопки нумерации квартир
             var ApartNumButton = new PushButtonData("Нумерация квартир", "Нумерация квартир", Assembly.GetExecutingAssembly().Location, "GeoAddin.ApartmentNumFilling");
-            var ApartNumPushBtn = panel.AddItem(ApartNumButton) as PushButton;
+            var ApartNumPushBtn = archpanel.AddItem(ApartNumButton) as PushButton;
             Image ApartNumPic = Properties.Resources.ApartmentNum;
             ImageSource ApartNumPicSrc = Convert(ApartNumPic);
             ApartNumPushBtn.LargeImage = ApartNumPicSrc;
@@ -43,11 +47,19 @@ namespace GeoAddin
 
             //Создание кнопки квартирографии
             var ApartmentgraphyButton = new PushButtonData("Квартирография", "Квартирография", Assembly.GetExecutingAssembly().Location, "GeoAddin.Apartmentgraphy");
-            var ApartmentgraphyPushBtn = panel.AddItem(ApartmentgraphyButton) as PushButton;
+            var ApartmentgraphyPushBtn = archpanel.AddItem(ApartmentgraphyButton) as PushButton;
             Image ApartmentgraphyButtonPic = Properties.Resources.ApartmentgraphyPic;
             ImageSource ApartmentgraphyButtonPicSrc = Convert(ApartmentgraphyButtonPic);
             ApartmentgraphyPushBtn.LargeImage = ApartmentgraphyButtonPicSrc;
             ApartmentgraphyPushBtn.Image = ApartmentgraphyButtonPicSrc;
+
+            //Создание кнопки отсоединения файла
+            var DetachFileButton = new PushButtonData("Отсоединение файла", "Отсоединение файла", Assembly.GetExecutingAssembly().Location, "GeoAddin.DetachFile");
+            var DetachFilePushBtn = commonpanel.AddItem(DetachFileButton) as PushButton;
+            Image DetachFileButtonPic = Properties.Resources.DetachFilePic;
+            ImageSource DetachFileButtonPicSrc = Convert(DetachFileButtonPic);
+            DetachFilePushBtn.LargeImage = DetachFileButtonPicSrc;
+            DetachFilePushBtn.Image = DetachFileButtonPicSrc;
 
             return Result.Succeeded;
         }
