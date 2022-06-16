@@ -24,6 +24,11 @@ namespace GeoAddin
     [Transaction(TransactionMode.Manual)]
     public class RoomGenerating : IExternalCommand
     {
+        static UIApplication uiapp;
+        static UIDocument uidoc;
+        static RevitApplication app;
+        static Document doc;
+        Phase phase;
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
             RoomGenWindow win = new RoomGenWindow();
@@ -43,57 +48,67 @@ namespace GeoAddin
                 RevitApplication app = uiapp.Application;
                 Document doc = uidoc.Document;
 
-                IList<Element> roomsToRemove = new FilteredElementCollector(doc, doc.ActiveView.Id).OfCategory(BuiltInCategory.OST_Rooms).WhereElementIsNotElementType().ToList();
+                double loggieAreaCoef = 0.5;
+                //double balconyAreaCoef = 0.3;
+                double defaultAreaCoef = 1.0;
+                double roomUp = upoffset;
+                double roomDown = botoffset;
+
+                IList<Element> roomsToRemove = new FilteredElementCollector(doc, doc.ActiveView.Id)
+                    .OfCategory(BuiltInCategory.OST_Rooms)
+                    .WhereElementIsNotElementType()
+                    .ToList();
                 if (roomsToRemove.Count > 0)
                 {
                     using (Transaction t = new Transaction(doc, "Удаление существующих помещений"))
-                    {
+                    { // Добвать проверку на наличие заполненых комнат
                         t.Start();
-                        foreach (Room room in roomsToRemove)
-                        {
-                            doc.Delete(room.Id);
-                        }
+                        doc.Delete(roomsToRemove.Select(room => room.Id).ToList());
                         t.Commit();
                     }
                 }
 
                 List<Room> rooms = new List<Room>();
-                List<Phase> phases = new List<Phase>();
+                phase = doc.Phases.get_Item(doc.Phases.Size - 1);
                 using (Transaction t = new Transaction(doc))
                 {
                     t.Start("Генерация помещений");
-
-                    double roomUp = upoffset;
-                    double roomDown = botoffset;
-                    foreach (Phase phase in doc.Phases)
-                    {
-                        phases.Add(phase);
-                    }
 
                     Level level = doc.ActiveView.GenLevel;
 
                     foreach (ElementId roomId in doc.Create.NewRooms2(level))
                     {
-                        rooms.Add(doc.GetElement(roomId) as Room);
-                    }
-
-                    t.Commit();
-
-                    t.Start("Смена тега помещений");
-                    FilteredElementCollector roomtags = new FilteredElementCollector(doc, doc.ActiveView.Id).OfCategory(BuiltInCategory.OST_RoomTags).WhereElementIsNotElementType();
-                    foreach (Room room in rooms)
-                    {
-                        foreach (RoomTag roomTag in roomtags)
-                        {
-                            if (room.Id.IntegerValue == roomTag.Room.Id.IntegerValue)
-                            {
-                                roomTag.ChangeTypeId(new ElementId(159738));
-                            }
-                        }
+                        Room room = doc.GetElement(roomId) as Room;
+                        rooms.Add(room);
                         room.get_Parameter(BuiltInParameter.ROOM_UPPER_OFFSET).Set(UnitUtils.ConvertToInternalUnits(roomUp, UnitTypeId.Millimeters));
                         room.get_Parameter(BuiltInParameter.ROOM_LOWER_OFFSET).Set(UnitUtils.ConvertToInternalUnits(roomDown, UnitTypeId.Millimeters));
                     }
                     t.Commit();
+
+                    t.Start("Смена тега помещений");
+                    List<RoomTag> roomtags = new FilteredElementCollector(doc, doc.ActiveView.Id)
+                        .OfCategory(BuiltInCategory.OST_RoomTags)
+                        .WhereElementIsNotElementType()
+                        .Cast<RoomTag>()
+                        .ToList();
+                    foreach (RoomTag roomTag in roomtags)
+                    {
+                        roomTag.ChangeTypeId(new ElementId(159738));
+                    }
+                    t.Commit();
+                }
+
+                List<Room> smallRooms = rooms.Where(room => UnitUtils.ConvertFromInternalUnits(room.get_Parameter(BuiltInParameter.ROOM_AREA).AsDouble(), UnitTypeId.SquareMeters) <= 1)
+                    .ToList();
+                rooms = rooms.Where(room => UnitUtils.ConvertFromInternalUnits(room.get_Parameter(BuiltInParameter.ROOM_AREA).AsDouble(), UnitTypeId.SquareMeters) > 1).ToList();
+                if (smallRooms.Count > 0)
+                {
+                    using (Transaction t = new Transaction(doc, "Удаление малых помещений"))
+                    {
+                        t.Start();
+                        doc.Delete(smallRooms.Select(room => room.Id).ToList());
+                        t.Commit();
+                    }
                 }
 
                 FilteredElementCollector plumbingFixtures = new FilteredElementCollector(doc, doc.ActiveView.Id).OfCategory(BuiltInCategory.OST_PlumbingFixtures).WhereElementIsNotElementType();
@@ -131,9 +146,6 @@ namespace GeoAddin
 
                 FilteredElementCollector windows = new FilteredElementCollector(doc, doc.ActiveView.Id).OfCategory(BuiltInCategory.OST_Windows).WhereElementIsNotElementType();
                 FilteredElementCollector doors = new FilteredElementCollector(doc, doc.ActiveView.Id).OfCategory(BuiltInCategory.OST_Doors).WhereElementIsNotElementType();
-
-
-               
 
                 using (Transaction t = new Transaction(doc, "Определение помещений"))
                 {
@@ -181,28 +193,33 @@ namespace GeoAddin
                         if (roomFixtures.Contains("Унитаз") && roomFixtures.Contains("Ванна"))
                         {
                             room.get_Parameter(BuiltInParameter.ROOM_NAME).Set("С.У.");
+                            room.LookupParameter("ADSK_Тип помещения").Set(2);
                         }
                         else if (!roomFixtures.Contains("Ванна") && roomFixtures.Contains("Умывальник") && roomFixtures.Contains("Унитаз"))
                         {
                             room.get_Parameter(BuiltInParameter.ROOM_NAME).Set("Уборная");
+                            room.LookupParameter("ADSK_Тип помещения").Set(2);
                         }
                         else if (!roomFixtures.Contains("Унитаз") && roomFixtures.Contains("Ванна"))
                         {
-                            room.get_Parameter(BuiltInParameter.ROOM_NAME).Set("Ванная");
+                            room.get_Parameter(BuiltInParameter.ROOM_NAME).Set("Вання");
+                            room.LookupParameter("ADSK_Тип помещения").Set(2);
                         }
                         else if (!roomFixtures.Contains("Ванна") && !roomFixtures.Contains("Умывальник") && !roomFixtures.Contains("Унитаз") && roomFixtures.Contains("Стиральная машина"))
                         {
                             room.get_Parameter(BuiltInParameter.ROOM_NAME).Set("Постирочная");
+                            room.LookupParameter("ADSK_Тип помещения").Set(2);
                         }
                         else if (roomFixtures.Contains("Кухня"))
                         {
                             room.get_Parameter(BuiltInParameter.ROOM_NAME).Set("Кухня");
+                            room.LookupParameter("ADSK_Тип помещения").Set(2);
                         }
 
                         List<int> roomWindowsIds = new List<int>();
                         foreach (FamilyInstance window in windows)
                         {
-                            Room windowToRoom = window.get_ToRoom(phases[phases.Count - 1]);
+                            Room windowToRoom = window.get_ToRoom(phase);
                             if (windowToRoom != null)
                             {
                                 roomWindowsIds.Add(windowToRoom.Id.IntegerValue);
@@ -213,29 +230,178 @@ namespace GeoAddin
                             if (room.Id.IntegerValue == elementId && room.get_Parameter(BuiltInParameter.ROOM_NAME).AsString().Contains("Помещение"))
                             {
                                 room.get_Parameter(BuiltInParameter.ROOM_NAME).Set("Жилая комната");
+                                room.LookupParameter("ADSK_Тип помещения").Set(1);
                             }
                         }
                         if (room.get_Parameter(BuiltInParameter.ROOM_NAME).AsString() == "Помещение")
                         {
                             room.get_Parameter(BuiltInParameter.ROOM_NAME).Set("Коридор");
+                            room.LookupParameter("ADSK_Тип помещения").Set(2);
                         }
-                        
+                        room.LookupParameter("ADSK_Коэффициент площади").Set(defaultAreaCoef);
                     }
                     foreach (FamilyInstance door in doors)
                     {
-                        Room doorFromRoom = door.get_FromRoom(phases[phases.Count - 1]);
+                        Room doorFromRoom = door.get_FromRoom(phase);
                         if (doorFromRoom != null && door.Symbol.get_Parameter(BuiltInParameter.ALL_MODEL_DESCRIPTION).AsString().Contains("Балконная"))
                         {
                             doorFromRoom.get_Parameter(BuiltInParameter.ROOM_NAME).Set("Лоджия");
-                         
+                            doorFromRoom.LookupParameter("ADSK_Тип помещения").Set(3);
+                            doorFromRoom.LookupParameter("ADSK_Коэффициент площади").Set(loggieAreaCoef);
                         }
                     }
                     t.Commit();
                 }
-                
+
+                IList<FamilyInstance> entryDoors = new FilteredElementCollector(doc, doc.ActiveView.Id) // Находим входные двери квартиры
+                    .OfCategory(BuiltInCategory.OST_Doors)
+                    .OfClass(typeof(FamilyInstance))
+                    .Cast<FamilyInstance>()
+                    .Where(door => door.Symbol.get_Parameter(BuiltInParameter.ALL_MODEL_DESCRIPTION).AsString().Contains("Дверь.Квартирная")) // Здесь и применяется тяжелый фильтр для поиска входных дверей
+                    .ToList();
+                FilteredElementCollector allRooms = new FilteredElementCollector(doc, doc.ActiveView.Id).OfCategory(BuiltInCategory.OST_Rooms).WhereElementIsNotElementType();
+
+                using (Transaction t = new Transaction(doc, "Нумерация комнат квартир")) // Основная транзакция
+                {
+                    t.Start();
+                    foreach (FamilyInstance entryDoor in entryDoors) // Проходим по каждой входной двери
+                    {
+                        List<Room> apartmnetRooms = GetApartmentRooms(entryDoor.get_FromRoom(phase), allRooms, null, entryDoor); // Эта функция отвечает за нахождение всех комнат в картире
+                        Level lvl = doc.GetElement(entryDoor.LevelId) as Level; // Часть, просто отвечающая за взятие номера квартиры, у нас по форме L01_001 с указанием уровня и номера квартиры
+                        string doorNumber = entryDoor.LookupParameter("ADSK_Номер квартиры").AsString();
+                        string apartmentNumber = null;
+                        if (!doorNumber.Contains("L") && !doorNumber.Contains("_"))
+                        {
+                            apartmentNumber = $"L{lvl.Name.Replace("Этаж ", "")}_{LeadingZeros(entryDoor.LookupParameter("ADSK_Номер квартиры").AsString())}";
+                        }
+                        else
+                        {
+                            apartmentNumber = doorNumber;
+                        }
+                        foreach (Room room in apartmnetRooms)
+                        {
+                            try
+                            {
+                                room.LookupParameter("ADSK_Номер квартиры").Set(apartmentNumber);
+                                room.LookupParameter("ADSK_Этаж").Set($"L{room.Level.Name.Replace("Этаж ", "")}");
+                            }
+                            catch (Exception ex)
+                            {
+                                MessageBox.Show(ex.Message, "Ошибка");
+                            }
+                        }
+                        entryDoor.LookupParameter("ADSK_Номер квартиры").Set(apartmentNumber);
+                    }
+                    t.Commit();
+                }
+
+                List<Room> MOP = new FilteredElementCollector(doc, doc.ActiveView.Id)
+                    .OfCategory(BuiltInCategory.OST_Rooms)
+                    .WhereElementIsNotElementType()
+                    .Cast<Room>()
+                    .Where(room => room.LookupParameter("ADSK_Номер квартиры").AsString() == null)
+                    .ToList();
+
+                using (Transaction t = new Transaction(doc, "Удаление МОП-ов"))
+                {
+                    t.Start();
+                    doc.Delete(MOP.Select(room => room.Id).ToList());
+                    t.Commit();
+                }
+
+                return Result.Succeeded;
             }
-            Debug.Print("Complited the task.");
             return Result.Succeeded;
+            /*
+             * Эта чудо-функция находит все комнаты.
+             */
+        }
+            private List<Room> GetApartmentRooms(Room currentRoom, FilteredElementCollector allRooms, List<Room> apartmentRooms = null, FamilyInstance entryDoor = null)
+            {
+                if (apartmentRooms == null)
+                {
+                    apartmentRooms = new List<Room>();
+                }
+                apartmentRooms.Add(currentRoom);
+                List<int> roomsIds = apartmentRooms.Select(room => room.Id.IntegerValue).ToList();
+
+                List<FamilyInstance> allDoorsOfRoom = new FilteredElementCollector(doc, doc.ActiveView.Id)
+                    .OfCategory(BuiltInCategory.OST_Doors)
+                    .OfClass(typeof(FamilyInstance))
+                    .Cast<FamilyInstance>()
+                    .Where(door =>
+                    door.get_FromRoom(phase).Id.IntegerValue == currentRoom.Id.IntegerValue || door.get_ToRoom(phase).Id.IntegerValue == currentRoom.Id.IntegerValue)
+                    .ToList();
+                if (entryDoor != null)
+                {
+                    allDoorsOfRoom = allDoorsOfRoom.Where(door => door.Id.IntegerValue != entryDoor.Id.IntegerValue).ToList();
+                }
+
+                if (allDoorsOfRoom.Count > 0)
+                {
+                    foreach (FamilyInstance door in allDoorsOfRoom)
+                    {
+                        if (door.get_FromRoom(phase).Id.IntegerValue != currentRoom.Id.IntegerValue)
+                        {
+                            if (!roomsIds.Contains(door.get_FromRoom(phase).Id.IntegerValue))
+                            {
+                                apartmentRooms = GetApartmentRooms(door.get_FromRoom(phase), allRooms, apartmentRooms, door);
+                            }
+                        }
+                        else
+                        {
+                            if (!roomsIds.Contains(door.get_ToRoom(phase).Id.IntegerValue))
+                            {
+                                apartmentRooms = GetApartmentRooms(door.get_ToRoom(phase), allRooms, apartmentRooms, door);
+                            }
+                        }
+                    }
+                }
+                Solid currentRoomSolid = GetSolidOfRoom(currentRoom);
+                List<Room> adjoiningRooms = allRooms.Cast<Room>()
+                    .Where(room => SolidsAreToching(currentRoomSolid, GetSolidOfRoom(room)) && !roomsIds.Contains(room.Id.IntegerValue))
+                    .ToList();
+                if (adjoiningRooms.Count > 0)
+                {
+                    foreach (Room room in adjoiningRooms)
+                    {
+                        apartmentRooms = GetApartmentRooms(room, allRooms, apartmentRooms);
+                    }
+                }
+
+                return apartmentRooms;
+            }
+            private static bool SolidsAreToching(Solid solid1, Solid solid2)
+            {
+                Solid interSolid = BooleanOperationsUtils.ExecuteBooleanOperation(solid1, solid2, BooleanOperationsType.Intersect);
+                Solid unionSolid = BooleanOperationsUtils.ExecuteBooleanOperation(solid1, solid2, BooleanOperationsType.Union);
+
+                double sumArea = Math.Round(Math.Abs(solid1.SurfaceArea + solid2.SurfaceArea), 5);
+                double sumFaces = Math.Abs(solid1.Faces.Size + solid2.Faces.Size);
+                double unionArea = Math.Round(Math.Abs(unionSolid.SurfaceArea), 5);
+                double unionFaces = Math.Abs(unionSolid.Faces.Size);
+
+                if (sumArea > unionArea && sumFaces > unionFaces && interSolid.Volume < 0.00001)
+                {
+                    return true;
+                }
+                return false;
+            }
+            private static Solid GetSolidOfRoom(Room room)
+            {
+                SpatialElementGeometryCalculator calculator = new SpatialElementGeometryCalculator(doc);
+                SpatialElementGeometryResults results = calculator.CalculateSpatialElementGeometry(room);
+                Solid roomSolid = results.GetGeometry();
+
+                return roomSolid;
+            }
+            private static string LeadingZeros(string str)
+            {
+                if (str.Length == 1) { return "00" + str; }
+                if (str.Length == 2) { return "0" + str; }
+                if (str.Length == 3) { return str; }
+                return null;
+            }
         }
     }
-}
+

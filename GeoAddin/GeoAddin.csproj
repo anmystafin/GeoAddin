@@ -72,7 +72,6 @@
     <Compile Include="DetachFile.cs" />
     <Compile Include="App.cs" />
     <Compile Include="Apartmentgraphy.cs" />
-    <Compile Include="ApartmentNumFilling.cs" />
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="ApartmentgraphyWindow.xaml.cs">
       <DependentUpon>ApartmentgraphyWindow.xaml</DependentUpon>
@@ -95,7 +94,6 @@
     <Content Include="GeoAddin.addin" />
     <None Include="Resources\DetachFilePic.png" />
     <None Include="Resources\RoomGenPic.png" />
-    <None Include="Resources\ApartmentNum.png" />
     <None Include="Resources\ApartmentgraphyPic.png" />
   </ItemGroup>
   <ItemGroup>

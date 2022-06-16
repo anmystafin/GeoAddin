@@ -56,7 +56,7 @@ namespace GeoAddin
                 //Сохранение файла
                 string activedoccentralpath = ModelPathUtils.ConvertModelPathToUserVisiblePath(doc.GetWorksharingCentralModelPath());
                 string activedocpath = doc.PathName;
-                string sharedpath = activedoccentralpath.Replace("Project", "Shared");
+                string sharedpath = activedoccentralpath.Replace("02.PROJECT", "03.SHARED");
                 string sharedoctitlepath = sharedpath.Replace(".rvt", "_Отсоединено.rvt");
                 string detachdocpath = sharedoctitlepath;
                 SaveAsOptions saveoptions = new SaveAsOptions();

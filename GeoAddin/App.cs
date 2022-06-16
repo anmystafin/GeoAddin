@@ -30,21 +30,14 @@ namespace GeoAddin
             var commonpanel = a.CreateRibbonPanel(tabName, commonpanelName);
 
             //Создание кнопки генерациии помещений
-            var ApartGenButton = new PushButtonData("Генерация помещений", "Генерация помещений", Assembly.GetExecutingAssembly().Location, "GeoAddin.RoomGenerating");
+            var ApartGenButton = new PushButtonData("Генерация квартир", "Генерация квартир", Assembly.GetExecutingAssembly().Location, "GeoAddin.RoomGenerating");
             var ApartGenPushBtn = archpanel.AddItem(ApartGenButton) as PushButton;
             Image RoomGenPic = Properties.Resources.RoomGenPic;
             ImageSource RoomGenPicSrc = Convert(RoomGenPic);
             ApartGenPushBtn.LargeImage = RoomGenPicSrc;
             ApartGenPushBtn.Image = RoomGenPicSrc;
 
-            //Создание кнопки нумерации квартир
-            var ApartNumButton = new PushButtonData("Нумерация квартир", "Нумерация квартир", Assembly.GetExecutingAssembly().Location, "GeoAddin.ApartmentNumFilling");
-            var ApartNumPushBtn = archpanel.AddItem(ApartNumButton) as PushButton;
-            Image ApartNumPic = Properties.Resources.ApartmentNum;
-            ImageSource ApartNumPicSrc = Convert(ApartNumPic);
-            ApartNumPushBtn.LargeImage = ApartNumPicSrc;
-            ApartNumPushBtn.Image = ApartNumPicSrc;
-
+            
             //Создание кнопки квартирографии
             var ApartmentgraphyButton = new PushButtonData("Квартирография", "Квартирография", Assembly.GetExecutingAssembly().Location, "GeoAddin.Apartmentgraphy");
             var ApartmentgraphyPushBtn = archpanel.AddItem(ApartmentgraphyButton) as PushButton;
