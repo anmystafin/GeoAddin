@@ -66,10 +66,70 @@ namespace GeoAddin
                 saveoptions.OverwriteExistingFile = true;
                 doc.SaveAs(detachdocpath, saveoptions);
                 Document detachdoc = uidoc.Document;
-                
 
-                //Открытие локального файла и закрытие сохраненной отсоединенной копии
-                OpenOptions openoptions = new OpenOptions();
+                //Удаление неиспользуемых элементов в отсоединенном документе
+                var methods = new List<MethodInfo>
+                {
+                    detachdoc.GetType().GetMethod("GetUnusedAppearances", BindingFlags.NonPublic | BindingFlags.Instance),
+                    detachdoc.GetType().GetMethod("GetUnusedMaterials", BindingFlags.NonPublic | BindingFlags.Instance),
+                    detachdoc.GetType().GetMethod("GetUnusedFamilies", BindingFlags.NonPublic | BindingFlags.Instance),
+                    detachdoc.GetType().GetMethod("GetUnusedImportCategories", BindingFlags.NonPublic | BindingFlags.Instance),
+                    detachdoc.GetType().GetMethod("GetUnusedStructures", BindingFlags.NonPublic | BindingFlags.Instance),
+                    detachdoc.GetType().GetMethod("GetUnusedSymbols", BindingFlags.NonPublic | BindingFlags.Instance),
+                    detachdoc.GetType().GetMethod("GetUnusedThermals", BindingFlags.NonPublic | BindingFlags.Instance),
+                    detachdoc.GetType().GetMethod("GetNonDeletableUnusedElements", BindingFlags.NonPublic | BindingFlags.Instance)
+                };
+        
+                var num = 0;
+                var tryCount = 0;
+                while (true)
+                {
+                    tryCount++;
+
+                    if (tryCount >= 5)
+                        break;
+
+                    var hashSet = new HashSet<ElementId>();
+
+                    foreach (var methodInfo in methods)
+                    {
+                        if (methodInfo?.Invoke(detachdoc, null) is ICollection<ElementId> c)
+                        {
+                            foreach (var id in c)
+                                hashSet.Add(id);
+                        }
+                    }
+
+                    if (hashSet.Count != num && hashSet.Count != 0)
+                    {
+                        num += hashSet.Count;
+                        using (var tr = new Transaction(detachdoc, "purge unused"))
+                        {
+                            tr.Start();
+                            foreach (var elementId in hashSet)
+                            {
+                                try
+                                {
+                                    detachdoc.Delete(elementId);
+                                }
+                                catch
+                                {
+                                    num--;
+                                }
+                            }
+
+                            tr.Commit();
+                        }
+
+                        continue;
+                    }
+
+                    break;
+                }
+
+
+            //Открытие локального файла и закрытие сохраненной отсоединенной копии
+            OpenOptions openoptions = new OpenOptions();
                 WorksetConfiguration wsconfig = new WorksetConfiguration();
                 openoptions.SetOpenWorksetsConfiguration(wsconfig);
                 FilePath filePath = new FilePath(activedocpath);
