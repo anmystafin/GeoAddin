@@ -62,6 +62,7 @@ namespace GeoAddin
                 SaveAsOptions saveoptions = new SaveAsOptions();
                 WorksharingSaveAsOptions wsoptions = new WorksharingSaveAsOptions();
                 wsoptions.SaveAsCentral = true;
+                wsoptions.OpenWorksetsDefault = SimpleWorksetConfiguration.LastViewed;
                 saveoptions.SetWorksharingOptions(wsoptions);
                 saveoptions.OverwriteExistingFile = true;
                 doc.SaveAs(detachdocpath, saveoptions);
@@ -129,9 +130,7 @@ namespace GeoAddin
 
 
             //Открытие локального файла и закрытие сохраненной отсоединенной копии
-            OpenOptions openoptions = new OpenOptions();
-                WorksetConfiguration wsconfig = new WorksetConfiguration();
-                openoptions.SetOpenWorksetsConfiguration(wsconfig);
+                OpenOptions openoptions = new OpenOptions();
                 FilePath filePath = new FilePath(activedocpath);
                 uiapp.OpenAndActivateDocument(filePath, openoptions, false);
 
