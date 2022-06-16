@@ -29,7 +29,6 @@ namespace GeoAddin
         static RevitApplication app;
         static Document doc;
         
-        Phase phase;
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
             uiapp = commandData.Application;
@@ -68,6 +67,7 @@ namespace GeoAddin
                 doc.SaveAs(detachdocpath, saveoptions);
                 Document detachdoc = uidoc.Document;
                 
+
                 //Открытие локального файла и закрытие сохраненной отсоединенной копии
                 OpenOptions openoptions = new OpenOptions();
                 WorksetConfiguration wsconfig = new WorksetConfiguration();
