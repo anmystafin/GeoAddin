@@ -31,6 +31,10 @@ namespace GeoAddin
         Phase phase;
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
+            uiapp = commandData.Application;
+            uidoc = uiapp.ActiveUIDocument;
+            app = uiapp.Application;
+            doc = uidoc.Document;
             RoomGenWindow win = new RoomGenWindow();
             win.ShowDialog();
             bool clickedon = win.clickedon;
@@ -43,17 +47,25 @@ namespace GeoAddin
             {
                 double upoffset = win.upoffset;
                 double botoffset = win.botoffset;
-                UIApplication uiapp = commandData.Application;
-                UIDocument uidoc = uiapp.ActiveUIDocument;
-                RevitApplication app = uiapp.Application;
-                Document doc = uidoc.Document;
-
+                
                 double loggieAreaCoef = 0.5;
                 //double balconyAreaCoef = 0.3;
                 double defaultAreaCoef = 1.0;
-                double roomUp = upoffset;
-                double roomDown = botoffset;
+                double roomUp = 3000;
+                double roomDown = 0;
 
+                try
+                {
+                    
+                     roomUp = upoffset;
+                     roomDown = botoffset;
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
+                }
+
+                
                 IList<Element> roomsToRemove = new FilteredElementCollector(doc, doc.ActiveView.Id)
                     .OfCategory(BuiltInCategory.OST_Rooms)
                     .WhereElementIsNotElementType()
@@ -316,8 +328,8 @@ namespace GeoAddin
              * Эта чудо-функция находит все комнаты.
              */
         }
-            private List<Room> GetApartmentRooms(Room currentRoom, FilteredElementCollector allRooms, List<Room> apartmentRooms = null, FamilyInstance entryDoor = null)
-            {
+        private List<Room> GetApartmentRooms(Room currentRoom, FilteredElementCollector allRooms, List<Room> apartmentRooms = null, FamilyInstance entryDoor = null)
+        {
                 if (apartmentRooms == null)
                 {
                     apartmentRooms = new List<Room>();
