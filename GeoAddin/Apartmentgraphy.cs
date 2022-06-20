@@ -49,16 +49,16 @@ namespace GeoAddin
 
                 foreach (Room room in areas)
                 {
-                    if (room.LookupParameter("ADSK_Номер квартиры").AsString() != null)
+                    if (room.LookupParameter("ADSK_Зона").AsString() != null)
                     {
-                        if (!apartments.ContainsKey(room.LookupParameter("ADSK_Номер квартиры").AsString()))
+                        if (!apartments.ContainsKey(room.LookupParameter("ADSK_Зона").AsString()))
                         {
                             List<Room> rooms = new List<Room>() { room };
-                            apartments.Add(room.LookupParameter("ADSK_Номер квартиры").AsString(), rooms);
+                            apartments.Add(room.LookupParameter("ADSK_Зона").AsString(), rooms);
                         }
                         else
                         {
-                            apartments[room.LookupParameter("ADSK_Номер квартиры").AsString()].Add(room);
+                            apartments[room.LookupParameter("ADSK_Зона").AsString()].Add(room);
                         }
 
                     }
@@ -86,7 +86,7 @@ namespace GeoAddin
                             }
                             try
                             {
-                                room.LookupParameter("Площадь помещения").Set(UnitUtils.ConvertToInternalUnits(Math.Round(areaOfRoom, roundNum), UnitTypeId.SquareMeters));
+                                room.LookupParameter("RMs_Площадь").Set(UnitUtils.ConvertToInternalUnits(Math.Round(areaOfRoom, roundNum), UnitTypeId.SquareMeters));
                             }
                             catch (Exception ex)
                             {
@@ -103,26 +103,26 @@ namespace GeoAddin
                                 {
                                     apartmaneAreaWithoutSummerRooms += areaOfRoom;
                                     apartmentAreaGeneral += areaOfRoom;
-                                    room.LookupParameter("ADSK_Коэффициент площади").Set(coefficent);
+                                    room.LookupParameter("RM_Коэффициент площади").Set(coefficent);
                                 }
                                 if (room.LookupParameter("Имя").AsString() == "Лоджия" || room.LookupParameter("Имя").AsString() == "Балкон")
                                 {
                                     if (room.LookupParameter("Имя").AsString() == "Лоджия")
                                     {
-                                        room.LookupParameter("ADSK_Коэффициент площади").Set(loggieAreaCoef);
+                                        room.LookupParameter("RM_Коэффициент площади").Set(loggieAreaCoef);
                                     }
                                     else if (room.LookupParameter("Имя").AsString() == "Балкон")
                                     {
-                                        room.LookupParameter("ADSK_Коэффициент площади").Set(balconyAreaCoef);
+                                        room.LookupParameter("RM_Коэффициент площади").Set(balconyAreaCoef);
                                     }
-                                    apartmentAreaGeneral += Math.Round(areaOfRoom * room.LookupParameter("ADSK_Коэффициент площади").AsDouble(), roundNum);
+                                    apartmentAreaGeneral += Math.Round(areaOfRoom * room.LookupParameter("RM_Коэффициент площади").AsDouble(), roundNum);
                                 }
                                 if (room.LookupParameter("Имя").AsString() == "Жилая комната" || room.LookupParameter("Имя").AsString() == "Гостиная" || room.LookupParameter("Имя").AsString() == "Спальня")
                                 {
                                     numberOfLivingRooms++;
                                     apartmentAreaLivingRooms += areaOfRoom;
                                 }
-                                room.LookupParameter("ADSK_Площадь с коэффициентом").Set(UnitUtils.ConvertToInternalUnits(Math.Round(areaOfRoom * room.LookupParameter("ADSK_Коэффициент площади").AsDouble(), roundNum), UnitTypeId.SquareMeters));
+                                room.LookupParameter("RMs_Площадь с кф").Set(UnitUtils.ConvertToInternalUnits(Math.Round(areaOfRoom * room.LookupParameter("RM_Коэффициент площади").AsDouble(), roundNum), UnitTypeId.SquareMeters));
                                 apartmentAreaGeneralWithoutCoef += areaOfRoom;
                             }
                             catch (Exception ex)
@@ -139,11 +139,11 @@ namespace GeoAddin
                         {
                             try
                             {
-                                room.LookupParameter("ADSK_Количество комнат").Set(numberOfLivingRooms);
-                                room.LookupParameter("ADSK_Площадь квартиры").Set(apartmaneAreaWithoutSummerRooms);
-                                room.LookupParameter("ADSK_Площадь квартиры жилая").Set(apartmentAreaLivingRooms);
-                                room.LookupParameter("ADSK_Площадь квартиры общая").Set(apartmentAreaGeneral);
-                                room.LookupParameter("Площадь квартиры без кф").Set(apartmentAreaGeneralWithoutCoef);
+                                room.LookupParameter("AP_Количество комнат").Set(numberOfLivingRooms);
+                                room.LookupParameter("APs_Общая площадь").Set(apartmaneAreaWithoutSummerRooms);
+                                room.LookupParameter("APs_Жилая площадь").Set(apartmentAreaLivingRooms);
+                                room.LookupParameter("APs_Общая площадь с учетом лет. пом.").Set(apartmentAreaGeneral);
+                                room.LookupParameter("APs_Общая площадь с учетом лет. пом. без кф").Set(apartmentAreaGeneralWithoutCoef);
                                 CreateRoomTag(room, doc, 159750, "bottom", "right");
                             }
                             catch (Exception ex)

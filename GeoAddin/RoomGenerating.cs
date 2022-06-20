@@ -133,7 +133,7 @@ namespace GeoAddin
 
                 foreach (FamilyInstance fixture in plumbingFixtures)
                 {
-                    string fixtureName = fixture.Symbol.Name;
+                    string fixtureName = fixture.Symbol.FamilyName;
                     if (fixtureName.Contains("Варочная_панель"))
                     {
                         kitchenPlumbs.Add(fixture);
@@ -205,27 +205,27 @@ namespace GeoAddin
                         if (roomFixtures.Contains("Унитаз") && roomFixtures.Contains("Ванна"))
                         {
                             room.get_Parameter(BuiltInParameter.ROOM_NAME).Set("С.У.");
-                            room.LookupParameter("ADSK_Тип помещения").Set(2);
+                            
                         }
                         else if (!roomFixtures.Contains("Ванна") && roomFixtures.Contains("Умывальник") && roomFixtures.Contains("Унитаз"))
                         {
                             room.get_Parameter(BuiltInParameter.ROOM_NAME).Set("Уборная");
-                            room.LookupParameter("ADSK_Тип помещения").Set(2);
+                            
                         }
                         else if (!roomFixtures.Contains("Унитаз") && roomFixtures.Contains("Ванна"))
                         {
-                            room.get_Parameter(BuiltInParameter.ROOM_NAME).Set("Вання");
-                            room.LookupParameter("ADSK_Тип помещения").Set(2);
+                            room.get_Parameter(BuiltInParameter.ROOM_NAME).Set("Ванная");
+                            
                         }
                         else if (!roomFixtures.Contains("Ванна") && !roomFixtures.Contains("Умывальник") && !roomFixtures.Contains("Унитаз") && roomFixtures.Contains("Стиральная машина"))
                         {
                             room.get_Parameter(BuiltInParameter.ROOM_NAME).Set("Постирочная");
-                            room.LookupParameter("ADSK_Тип помещения").Set(2);
+                            
                         }
                         else if (roomFixtures.Contains("Кухня"))
                         {
                             room.get_Parameter(BuiltInParameter.ROOM_NAME).Set("Кухня");
-                            room.LookupParameter("ADSK_Тип помещения").Set(2);
+                            
                         }
 
                         List<int> roomWindowsIds = new List<int>();
@@ -242,15 +242,15 @@ namespace GeoAddin
                             if (room.Id.IntegerValue == elementId && room.get_Parameter(BuiltInParameter.ROOM_NAME).AsString().Contains("Помещение"))
                             {
                                 room.get_Parameter(BuiltInParameter.ROOM_NAME).Set("Жилая комната");
-                                room.LookupParameter("ADSK_Тип помещения").Set(1);
+                                
                             }
                         }
                         if (room.get_Parameter(BuiltInParameter.ROOM_NAME).AsString() == "Помещение")
                         {
                             room.get_Parameter(BuiltInParameter.ROOM_NAME).Set("Коридор");
-                            room.LookupParameter("ADSK_Тип помещения").Set(2);
+                            
                         }
-                        room.LookupParameter("ADSK_Коэффициент площади").Set(defaultAreaCoef);
+                        room.LookupParameter("RM_Коэффициент площади").Set(defaultAreaCoef);
                     }
                     foreach (FamilyInstance door in doors)
                     {
@@ -258,8 +258,8 @@ namespace GeoAddin
                         if (doorFromRoom != null && door.Symbol.get_Parameter(BuiltInParameter.ALL_MODEL_DESCRIPTION).AsString().Contains("Балконная"))
                         {
                             doorFromRoom.get_Parameter(BuiltInParameter.ROOM_NAME).Set("Лоджия");
-                            doorFromRoom.LookupParameter("ADSK_Тип помещения").Set(3);
-                            doorFromRoom.LookupParameter("ADSK_Коэффициент площади").Set(loggieAreaCoef);
+                            
+                            doorFromRoom.LookupParameter("RM_Коэффициент площади").Set(loggieAreaCoef);
                         }
                     }
                     t.Commit();
@@ -269,7 +269,7 @@ namespace GeoAddin
                     .OfCategory(BuiltInCategory.OST_Doors)
                     .OfClass(typeof(FamilyInstance))
                     .Cast<FamilyInstance>()
-                    .Where(door => door.Symbol.get_Parameter(BuiltInParameter.ALL_MODEL_DESCRIPTION).AsString().Contains("Дверь.Квартирная")) // Здесь и применяется тяжелый фильтр для поиска входных дверей
+                    .Where(door => door.Symbol.get_Parameter(BuiltInParameter.ALL_MODEL_DESCRIPTION).AsString().Contains("Квартирная")) // Здесь и применяется тяжелый фильтр для поиска входных дверей
                     .ToList();
                 FilteredElementCollector allRooms = new FilteredElementCollector(doc, doc.ActiveView.Id).OfCategory(BuiltInCategory.OST_Rooms).WhereElementIsNotElementType();
 
@@ -280,11 +280,11 @@ namespace GeoAddin
                     {
                         List<Room> apartmnetRooms = GetApartmentRooms(entryDoor.get_FromRoom(phase), allRooms, null, entryDoor); // Эта функция отвечает за нахождение всех комнат в картире
                         Level lvl = doc.GetElement(entryDoor.LevelId) as Level; // Часть, просто отвечающая за взятие номера квартиры, у нас по форме L01_001 с указанием уровня и номера квартиры
-                        string doorNumber = entryDoor.LookupParameter("ADSK_Номер квартиры").AsString();
+                        string doorNumber = entryDoor.LookupParameter("ADSK_Зона").AsString();
                         string apartmentNumber = null;
                         if (!doorNumber.Contains("L") && !doorNumber.Contains("_"))
                         {
-                            apartmentNumber = $"L{lvl.Name.Replace("Этаж ", "")}_{LeadingZeros(entryDoor.LookupParameter("ADSK_Номер квартиры").AsString())}";
+                            apartmentNumber = $"L{lvl.Name.Replace("Этаж ", "")}_{LeadingZeros(entryDoor.LookupParameter("ADSK_Зона").AsString())}";
                         }
                         else
                         {
@@ -294,7 +294,7 @@ namespace GeoAddin
                         {
                             try
                             {
-                                room.LookupParameter("ADSK_Номер квартиры").Set(apartmentNumber);
+                                room.LookupParameter("ADSK_Зона").Set(apartmentNumber);
                                 room.LookupParameter("ADSK_Этаж").Set($"L{room.Level.Name.Replace("Этаж ", "")}");
                             }
                             catch (Exception ex)
@@ -302,7 +302,7 @@ namespace GeoAddin
                                 MessageBox.Show(ex.Message, "Ошибка");
                             }
                         }
-                        entryDoor.LookupParameter("ADSK_Номер квартиры").Set(apartmentNumber);
+                        entryDoor.LookupParameter("ADSK_Зона").Set(apartmentNumber);
                     }
                     t.Commit();
                 }
@@ -311,13 +311,19 @@ namespace GeoAddin
                     .OfCategory(BuiltInCategory.OST_Rooms)
                     .WhereElementIsNotElementType()
                     .Cast<Room>()
-                    .Where(room => room.LookupParameter("ADSK_Номер квартиры").AsString() == null)
+                    .Where(room => room.LookupParameter("ADSK_Зона").AsString() == null)
                     .ToList();
 
                 using (Transaction t = new Transaction(doc, "Удаление МОП-ов"))
                 {
                     t.Start();
                     doc.Delete(MOP.Select(room => room.Id).ToList());
+                    t.Commit();
+                }
+                using (Transaction t = new Transaction(doc, "Добавление цветовой схемы"))
+                {
+                    t.Start();
+                    doc.ActiveView.SetColorFillSchemeId(new ElementId(BuiltInCategory.OST_Rooms), new ElementId(15969));
                     t.Commit();
                 }
 
@@ -328,7 +334,7 @@ namespace GeoAddin
              * Эта чудо-функция находит все комнаты.
              */
         }
-        private List<Room> GetApartmentRooms(Room currentRoom, FilteredElementCollector allRooms, List<Room> apartmentRooms = null, FamilyInstance entryDoor = null)
+            private List<Room> GetApartmentRooms(Room currentRoom, FilteredElementCollector allRooms, List<Room> apartmentRooms = null, FamilyInstance entryDoor = null)
         {
                 if (apartmentRooms == null)
                 {
