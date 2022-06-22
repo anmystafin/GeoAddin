@@ -69,6 +69,8 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Class.cs" />
+    <Compile Include="WindowsFilling.cs" />
     <Compile Include="DetachFile.cs" />
     <Compile Include="App.cs" />
     <Compile Include="Apartmentgraphy.cs" />
@@ -92,6 +94,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="GeoAddin.addin" />
+    <None Include="Resources\WindowFilling.png" />
     <None Include="Resources\DetachFilePic.png" />
     <None Include="Resources\RoomGenPic.png" />
     <None Include="Resources\ApartmentgraphyPic.png" />

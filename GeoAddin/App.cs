@@ -46,6 +46,14 @@ namespace GeoAddin
             ApartmentgraphyPushBtn.LargeImage = ApartmentgraphyButtonPicSrc;
             ApartmentgraphyPushBtn.Image = ApartmentgraphyButtonPicSrc;
 
+            //Создание кнопки заполнения окон
+            var WindowsFillingButton = new PushButtonData("Заполнение окон", "Заполнение окон", Assembly.GetExecutingAssembly().Location, "GeoAddin.WindowsFilling");
+            var WindowsFillingPushBtn = archpanel.AddItem(WindowsFillingButton) as PushButton;
+            Image WindowsFillingButtonPic = Properties.Resources.WindowFilling;
+            ImageSource WindowsFillingButtonPicSrc = Convert(WindowsFillingButtonPic);
+            WindowsFillingPushBtn.LargeImage = WindowsFillingButtonPicSrc;
+            WindowsFillingPushBtn.Image = WindowsFillingButtonPicSrc;
+
             //Создание кнопки отсоединения файла
             var DetachFileButton = new PushButtonData("Отсоединение файла", "Отсоединение файла", Assembly.GetExecutingAssembly().Location, "GeoAddin.DetachFile");
             var DetachFilePushBtn = commonpanel.AddItem(DetachFileButton) as PushButton;

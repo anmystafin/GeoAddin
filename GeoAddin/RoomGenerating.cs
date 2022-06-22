@@ -255,7 +255,7 @@ namespace GeoAddin
                     foreach (FamilyInstance door in doors)
                     {
                         Room doorFromRoom = door.get_FromRoom(phase);
-                        if (doorFromRoom != null && door.Symbol.get_Parameter(BuiltInParameter.ALL_MODEL_DESCRIPTION).AsString().Contains("Балконная"))
+                        if (doorFromRoom != null && door.Symbol.get_Parameter(BuiltInParameter.ALL_MODEL_DESCRIPTION).AsString().Contains("ПВХ"))
                         {
                             doorFromRoom.get_Parameter(BuiltInParameter.ROOM_NAME).Set("Лоджия");
                             
@@ -269,7 +269,7 @@ namespace GeoAddin
                     .OfCategory(BuiltInCategory.OST_Doors)
                     .OfClass(typeof(FamilyInstance))
                     .Cast<FamilyInstance>()
-                    .Where(door => door.Symbol.get_Parameter(BuiltInParameter.ALL_MODEL_DESCRIPTION).AsString().Contains("Квартирная")) // Здесь и применяется тяжелый фильтр для поиска входных дверей
+                    .Where(door => door.Symbol.get_Parameter(BuiltInParameter.ALL_MODEL_DESCRIPTION).AsString().Contains("квартирная")) // Здесь и применяется тяжелый фильтр для поиска входных дверей
                     .ToList();
                 FilteredElementCollector allRooms = new FilteredElementCollector(doc, doc.ActiveView.Id).OfCategory(BuiltInCategory.OST_Rooms).WhereElementIsNotElementType();
 

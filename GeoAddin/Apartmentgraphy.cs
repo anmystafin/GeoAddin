@@ -144,7 +144,15 @@ namespace GeoAddin
                                 room.LookupParameter("APs_Жилая площадь").Set(apartmentAreaLivingRooms);
                                 room.LookupParameter("APs_Общая площадь с учетом лет. пом.").Set(apartmentAreaGeneral);
                                 room.LookupParameter("APs_Общая площадь с учетом лет. пом. без кф").Set(apartmentAreaGeneralWithoutCoef);
-                                CreateRoomTag(room, doc, 159750, "bottom", "right");
+                                if (room.LookupParameter("RM_Коэффициент площади").AsDouble() < 1)
+                                {
+                                    CreateRoomTag(room, doc, 159750, "bottom", "right");
+                                }
+                                else
+                                {
+                                    CreateRoomTag(room, doc, 159742, "bottom", "right");
+                                }
+                                
                             }
                             catch (Exception ex)
                             {
