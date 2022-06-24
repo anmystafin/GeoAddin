@@ -50,21 +50,39 @@ namespace GeoAddin
 
             }
             List<FamilySymbol> windowTypes = new List<FamilySymbol>();
+            
             foreach (FamilySymbol familySymbol in activeWindowTypes)
             {
                 foreach (string windowTypesName in windowTypesNames)
                 {
                     if (familySymbol.Name == windowTypesName) { windowTypes.Add(familySymbol);}
                 }
-            } 
-
+            }
+            int count = windowTypes.Count;
             //Получение легенду на виде и типизированный список его Id
+            List<Element> makedLegendComponent = new FilteredElementCollector(doc, GetWindowSchemaView(views).Id).OfCategory(BuiltInCategory.OST_LegendComponents).ToList();
+            List<Element> textNotes = new FilteredElementCollector(doc, GetWindowSchemaView(views).Id).OfCategory(BuiltInCategory.OST_TextNotes).ToList();
+            //Удаление компонентов и текстовых примечаний если они уже существуют на виде
+            using (Transaction t = new Transaction(doc, "Удаление существующих компонентов"))
+            {
+                t.Start();
+                if (textNotes != null) { foreach (TextNote texNote in textNotes) { doc.Delete(texNote.Id); } }
+                
+                if (makedLegendComponent.Count > 1)
+                {
+                    for (int i = 1; i < makedLegendComponent.Count; i++)
+                    {
+                        doc.Delete(makedLegendComponent[i].Id);
+                    }
+                }
+                t.Commit();
+            }
             List<Element> legendComponent = new FilteredElementCollector(doc, GetWindowSchemaView(views).Id).OfCategory(BuiltInCategory.OST_LegendComponents).ToList();
             ICollection<ElementId> elementIds = legendComponent.Select(el => el.Id).ToList();
 
-            double deltaX = 7;
+            double deltaX = 0;
             
-            foreach (FamilySymbol familySymbol in activeWindowTypes)
+            foreach (FamilySymbol familySymbol in windowTypes)
             {
 
                 using (Transaction t = new Transaction(doc, "Копирование компонентов легенды"))
@@ -74,14 +92,9 @@ namespace GeoAddin
                     Group group = doc.Create.NewGroup(elementIds);
                     LocationPoint location = group.Location as LocationPoint;
                     XYZ windowLocationPoint = new XYZ(location.Point.X + deltaX, location.Point.Y, location.Point.Z);
-                    XYZ markLocationPoint = new XYZ(location.Point.X + deltaX + 0.5, location.Point.Y/133.5, 0);
-                    XYZ squareLocationPoint = new XYZ(location.Point.X + deltaX + 0.5, location.Point.Y / 135, 0);
                     Group newGroup = doc.Create.PlaceGroup(windowLocationPoint, group.GroupType);
                     group.UngroupMembers();
                     newGroup.UngroupMembers();
-                    TextNote markTextNote = TextNote.Create(doc, GetWindowSchemaView(views).Id, markLocationPoint, familySymbol.LookupParameter("ADSK_Марка").AsString(), new TextNoteOptions(new ElementId(8047)));
-                    string windowSquare = "S = " + ((UnitUtils.ConvertFromInternalUnits(familySymbol.LookupParameter("Примерная ширина").AsDouble(), UnitTypeId.Millimeters) * UnitUtils.ConvertFromInternalUnits(familySymbol.LookupParameter("Примерная высота").AsDouble(), UnitTypeId.Millimeters))/1000000).ToString() + " м2";    
-                    TextNote squareTextNote = TextNote.Create(doc, GetWindowSchemaView(views).Id, squareLocationPoint, windowSquare, new TextNoteOptions(new ElementId(8047)));
                     t.Commit();
 
                 }
@@ -99,13 +112,37 @@ namespace GeoAddin
             {
                 t.Start();
                 List<Element> newLegendComponents = new FilteredElementCollector(doc, GetWindowSchemaView(views).Id).OfCategory(BuiltInCategory.OST_LegendComponents).ToList();
+                
                 for (int i = 0; i < newLegendComponents.Count; i++)
                 {
-                    newLegendComponents[i].LookupParameter("Тип компонента").Set(activeWindowTypes[i].Id);
+                    newLegendComponents[i].LookupParameter("Тип компонента").Set(windowTypes[i].Id);
+                    
                 }
+                
                 t.Commit();
             }
-             
+            using (Transaction t = new Transaction(doc, "Вставка текстовых марок"))
+            {
+                t.Start();
+                List<Element> changedLegendComponents = new FilteredElementCollector(doc, GetWindowSchemaView(views).Id).OfCategory(BuiltInCategory.OST_LegendComponents).ToList();
+
+                for (int i = 0; i < changedLegendComponents.Count; i++)
+                {
+                    
+                    BoundingBoxXYZ bb = changedLegendComponents[i].get_BoundingBox(GetWindowSchemaView(views));
+                    XYZ minLocation = bb.Min;
+                    XYZ maxLocation = bb.Max;
+                    XYZ markLocation = new XYZ((minLocation.X + maxLocation.X) / 2 - 0.25, minLocation.Y + windowTypes[i].LookupParameter("Примерная высота").AsDouble() + 1.5, 0);
+                    XYZ squareLocation = new XYZ((minLocation.X + maxLocation.X) / 2 - 0.5, minLocation .Y + windowTypes[i].LookupParameter("Примерная высота").AsDouble() + 1, 0);
+
+                    TextNote markTextNote = TextNote.Create(doc, GetWindowSchemaView(views).Id, markLocation, windowTypes[i].LookupParameter("ADSK_Марка").AsString(), new TextNoteOptions(new ElementId(8047)));
+                    string windowSquare = "S = " + Math.Round(((UnitUtils.ConvertFromInternalUnits(windowTypes[i].LookupParameter("Примерная ширина").AsDouble(), UnitTypeId.Millimeters) * UnitUtils.ConvertFromInternalUnits(windowTypes[i].LookupParameter("Примерная высота").AsDouble(), UnitTypeId.Millimeters)) / 1000000), 2).ToString() + " м²";
+                    TextNote squareTextNote = TextNote.Create(doc, GetWindowSchemaView(views).Id, squareLocation, windowSquare, new TextNoteOptions(new ElementId(8047)));
+                }
+
+                t.Commit();
+            }
+
             return Result.Succeeded;
         }
         //Функция для нахождения легенды схем окон
