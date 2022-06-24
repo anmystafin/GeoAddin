@@ -54,6 +54,14 @@ namespace GeoAddin
             WindowsFillingPushBtn.LargeImage = WindowsFillingButtonPicSrc;
             WindowsFillingPushBtn.Image = WindowsFillingButtonPicSrc;
 
+            //Создание кнопки создания оконных схем
+            var WindowsSchemaButton = new PushButtonData("Схема окон", "Схема окон", Assembly.GetExecutingAssembly().Location, "GeoAddin.WindowsSchema");
+            var WindowsSchemaPushBtn = archpanel.AddItem(WindowsSchemaButton) as PushButton;
+            Image WindowsSchemaButtonPic = Properties.Resources.WindowSchema;
+            ImageSource WindowsSchemaButtonPicSrc = Convert(WindowsSchemaButtonPic);
+            WindowsSchemaPushBtn.LargeImage = WindowsSchemaButtonPicSrc;
+            WindowsSchemaPushBtn.Image = WindowsSchemaButtonPicSrc;
+
             //Создание кнопки отсоединения файла
             var DetachFileButton = new PushButtonData("Отсоединение файла", "Отсоединение файла", Assembly.GetExecutingAssembly().Location, "GeoAddin.DetachFile");
             var DetachFilePushBtn = commonpanel.AddItem(DetachFileButton) as PushButton;

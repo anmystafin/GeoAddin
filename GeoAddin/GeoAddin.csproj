@@ -70,6 +70,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Class.cs" />
+    <Compile Include="WindowsSchema.cs" />
     <Compile Include="WindowsFilling.cs" />
     <Compile Include="DetachFile.cs" />
     <Compile Include="App.cs" />
@@ -94,6 +95,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="GeoAddin.addin" />
+    <None Include="Resources\WindowSchema.png" />
     <None Include="Resources\WindowFilling.png" />
     <None Include="Resources\DetachFilePic.png" />
     <None Include="Resources\RoomGenPic.png" />
