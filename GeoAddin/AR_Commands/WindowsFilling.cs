@@ -27,6 +27,8 @@ namespace GeoAddin
         static RevitApplication app;
         static Document doc;
 
+
+
         //Переменные для работы с параметрами
         string windowConstrType;
         string windowMaterial;
@@ -53,6 +55,10 @@ namespace GeoAddin
 
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
+            uiapp = commandData.Application;
+            uidoc = uiapp.ActiveUIDocument;
+            app = uiapp.Application;
+            doc = uidoc.Document;
             //Получение всех окон в проекте и проверка параметров
             IList<Element> windowTypes = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_Windows).WhereElementIsElementType().ToList();
             foreach (Element window in windowTypes)

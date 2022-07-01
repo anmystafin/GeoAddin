@@ -69,20 +69,24 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Openings_Commands\OpeningGenerating.cs" />
     <Compile Include="Class.cs" />
-    <Compile Include="WindowsSchema.cs" />
-    <Compile Include="WindowsFilling.cs" />
-    <Compile Include="DetachFile.cs" />
+    <Compile Include="Openings_Windows\OpeningGenWindow.xaml.cs">
+      <DependentUpon>OpeningGenWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="AR_Commands\WindowsSchema.cs" />
+    <Compile Include="AR_Commands\WindowsFilling.cs" />
+    <Compile Include="Common_Commands\DetachFile.cs" />
     <Compile Include="App.cs" />
-    <Compile Include="Apartmentgraphy.cs" />
+    <Compile Include="AR_Commands\Apartmentgraphy.cs" />
     <Compile Include="AssemblyInfo.cs" />
-    <Compile Include="ApartmentgraphyWindow.xaml.cs">
+    <Compile Include="AR_Windows\ApartmentgraphyWindow.xaml.cs">
       <DependentUpon>ApartmentgraphyWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="DetachFileWindow.xaml.cs">
+    <Compile Include="Common_Windows\DetachFileWindow.xaml.cs">
       <DependentUpon>DetachFileWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="RoomGenWindow.xaml.cs">
+    <Compile Include="AR_Windows\RoomGenWindow.xaml.cs">
       <DependentUpon>RoomGenWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Properties\Resources.Designer.cs">
@@ -90,14 +94,15 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Include="RoomGenerating.cs" />
+    <Compile Include="AR_Commands\RoomGenerating.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="GeoAddin.addin" />
-    <None Include="Resources\WindowSchema.png" />
     <None Include="Resources\WindowFilling.png" />
     <None Include="Resources\DetachFilePic.png" />
+    <None Include="Resources\OpeningPic.png" />
+    <None Include="Resources\WindowSchema.png" />
     <None Include="Resources\RoomGenPic.png" />
     <None Include="Resources\ApartmentgraphyPic.png" />
   </ItemGroup>
@@ -108,15 +113,19 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <Page Include="ApartmentgraphyWindow.xaml">
+    <Page Include="AR_Windows\ApartmentgraphyWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="DetachFileWindow.xaml">
+    <Page Include="Common_Windows\DetachFileWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="RoomGenWindow.xaml">
+    <Page Include="Openings_Windows\OpeningGenWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="AR_Windows\RoomGenWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
