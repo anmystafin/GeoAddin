@@ -66,15 +66,21 @@ namespace GeoAddin
                      
                 }
                 string linkDocTitle = linkDoc.Title;
-                openingBoundOffset = Convert.ToDouble(win.BoundOffset.Text);
+                openingBoundOffset = UnitUtils.ConvertToInternalUnits(Convert.ToDouble(win.BoundOffset.Text), UnitTypeId.Millimeters);
                 openingFunc = win.OpeningFunc.Text;
                 //
                 //Получение типоразмера отверстия
-                List<FamilySymbol> openingFamilySymbol = new FilteredElementCollector(doc)
+                List<FamilySymbol> wallOpeningFamilySymbol = new FilteredElementCollector(doc)
                     .OfCategory(BuiltInCategory.OST_DataDevices)
                     .WhereElementIsElementType()
                     .Cast<FamilySymbol>()
-                    .Where(el => el.FamilyName == "Отверстие_Универсальное")
+                    .Where(el => el.FamilyName == "Отверстие_вСтене")
+                    .ToList();
+                List<FamilySymbol> floorOpeningFamilySymbol = new FilteredElementCollector(doc)
+                    .OfCategory(BuiltInCategory.OST_DataDevices)
+                    .WhereElementIsElementType()
+                    .Cast<FamilySymbol>()
+                    .Where(el => el.FamilyName == "Отверстие_вПолу")
                     .ToList();
 
                 //Получение перекрытий и стен из связанного файла
@@ -115,7 +121,7 @@ namespace GeoAddin
                     .ToList();
                 List<Element> mepElements = ductCurves.Concat(pipeCurves).Concat(cableTrays).Concat(conduits).ToList();
 
-                //Проверка пересечения элементов и получение точек вставки семейств
+                //Проверка пересечения элементов и генерация семейств отверстий
                 using (Transaction t = new Transaction(doc, "Генерация отверстий"))
                 {
                     t.Start();
@@ -125,32 +131,54 @@ namespace GeoAddin
                         {
                             Solid solid = GetSolidOfElement(linkElement);
                             Line line = GetCenterLineOfElement(mepElement);
+                            Solid lineSolid = GetSolidOfElement(mepElement);
                             SolidCurveIntersection intersectionCurves = solid.IntersectWithCurve(line, new SolidCurveIntersectionOptions());
-                            PlanarFace face = (PlanarFace)solid.Faces.get_Item(0);
-                            XYZ normalFace = face.FaceNormal;
+                            BoundingBoxUV bb = lineSolid.Faces.get_Item(0).GetBoundingBox();
+                            double maxU = bb.Max.U;
+                            double maxV = bb.Max.V;
+                            double minU = bb.Min.U;
+                            double minV = bb.Min.V;
+                            double length = (maxV - minV) + openingBoundOffset;
+                            double width = (maxU - minU) + openingBoundOffset;
                             
                             if (intersectionCurves.Count() > 0)
                             {
-                                /*var x =  (solid.ToProtoType().BoundingBox.Intersection(solidLine.ToProtoType().BoundingBox).MaxPoint.X + solid.ToProtoType().BoundingBox.Intersection(solidLine.ToProtoType().BoundingBox).MinPoint.X) / 2;
-                                double y = (solid.ToProtoType().BoundingBox.Intersection(line.ToProtoType().BoundingBox).MaxPoint.Y + solid.ToProtoType().BoundingBox.Intersection(line.ToProtoType().BoundingBox).MinPoint.Y) / 2;
-                                double z = (solid.ToProtoType().BoundingBox.Intersection(line.ToProtoType().BoundingBox).MaxPoint.Z + solid.ToProtoType().BoundingBox.Intersection(line.ToProtoType().BoundingBox).MinPoint.Z) / 2;*/
-                                /*XYZ locationPoint = new XYZ(x, y, z);
-                                XYZ directionPoint = solid.ToProtoType().Faces.First().SurfaceGeometry().TangentAtUParameter(solid.ToProtoType().Faces.First().SurfaceGeometry().UVParameterAtPoint(locationPoint.ToPoint()).U, solid.ToProtoType().Faces.First().SurfaceGeometry().UVParameterAtPoint(locationPoint.ToPoint()).V).ToXyz();
-                                */
+                               
                                 Line intersectionLine = intersectionCurves.First() as Line;
                                 double x = (intersectionLine.GetEndPoint(0).X + intersectionLine.GetEndPoint(1).X) / 2;
                                 double y = (intersectionLine.GetEndPoint(0).Y + intersectionLine.GetEndPoint(1).Y) / 2;
                                 double z = (intersectionLine.GetEndPoint(0).Z + intersectionLine.GetEndPoint(1).Z) / 2;
                                 XYZ locationPoint = new XYZ(x, y, z);
-                                Transform transform = Transform.CreateRotationAtPoint(new XYZ(0, 0, 1), (Math.PI * 90) / 180, locationPoint);
-                                XYZ transformedNormal = transform.OfVector(normalFace);
-                                Line axis = Line.CreateUnbound(locationPoint, transformedNormal);
-
-                                doc.Create.NewFamilyInstance(locationPoint, openingFamilySymbol[0], line.Direction, null, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
-                                List<ElementId> openingIds = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_DataDevices).WhereElementIsNotElementType().Select(el => el.Id).ToList();
-                                ElementTransformUtils.RotateElements(doc, openingIds, axis, (Math.PI* 90)/180);
-
-
+                                if (linkElement.Category.Name == "Стены")
+                                {
+                                   FamilyInstance el =  doc.Create.NewFamilyInstance(locationPoint, wallOpeningFamilySymbol[0], line.Direction, null, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
+                                    el.LookupParameter("ADSK_Отверстие_Функция").Set(openingFunc);
+                                    Wall wall = linkElement as Wall;
+                                    if (wall.Orientation.Y == 1 | wall.Orientation.Y == -1)
+                                    {
+                                        el.LookupParameter("ADSK_Размер_Длина").Set(width);
+                                        el.LookupParameter("ADSK_Размер_Ширина").Set(length);
+                                        el.LookupParameter("ADSK_Размер_Толщина").Set(intersectionLine.ApproximateLength);
+                                        
+                                    }
+                                    else
+                                    {
+                                        el.LookupParameter("ADSK_Размер_Длина").Set(length);
+                                        el.LookupParameter("ADSK_Размер_Ширина").Set(width);
+                                        el.LookupParameter("ADSK_Размер_Толщина").Set(intersectionLine.ApproximateLength);
+                                    }
+                                     
+                                }
+                                else
+                                {
+                                    FamilyInstance el = doc.Create.NewFamilyInstance(locationPoint, floorOpeningFamilySymbol[0], line.Direction, null, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
+                                    el.LookupParameter("ADSK_Отверстие_Функция").Set(openingFunc);
+                                    el.LookupParameter("ADSK_Размер_Длина").Set(width);
+                                    el.LookupParameter("ADSK_Размер_Ширина").Set(length);
+                                    el.LookupParameter("ADSK_Размер_Толщина").Set(intersectionLine.ApproximateLength);
+                                    
+                                }
+                               
                             }
                         }
                     }
@@ -159,13 +187,7 @@ namespace GeoAddin
 
 
                 }
-                /*using (Transaction t = new Transaction(doc, "Образмеривание отверстий"))
-                {
-                    t.Start();
-                    List<Element> openings = new FilteredElementCollector
-
-                    t.Commit();
-                }*/
+                
             }
 
 
