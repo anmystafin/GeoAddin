@@ -123,13 +123,13 @@ namespace GeoAddin
 
                 //Проверка пересечения элементов и генерация семейств отверстий
                 
-
-              foreach (Element mepElement in mepElements)
-              {
+                foreach (Element mepElement in mepElements)
+                {
                    foreach (Element linkElement in linkElements)
                    {
                             Solid solid = GetSolidOfElement(linkElement);
                             Line line = GetCenterLineOfElement(mepElement);
+                            
                             Solid lineSolid = GetSolidOfElement(mepElement);
                             SolidCurveIntersection intersectionCurves = solid.IntersectWithCurve(line, new SolidCurveIntersectionOptions());
                             BoundingBoxUV bb = lineSolid.Faces.get_Item(0).GetBoundingBox();
@@ -165,6 +165,7 @@ namespace GeoAddin
                                                 el.LookupParameter("ADSK_Размер_Ширина").Set(length);
                                                 el.LookupParameter("ADSK_Размер_Толщина").Set(intersectionLine.ApproximateLength);
 
+                                        
                                             }
 
                                             else
@@ -192,75 +193,65 @@ namespace GeoAddin
                        
                    }
                     
-              }
+                }
+
                 //Поиск отверстий и объединение
+                
                 List<FamilyInstance> openingInstances = new FilteredElementCollector(doc, doc.ActiveView.Id)
                         .OfCategory(BuiltInCategory.OST_DataDevices)
                         .WhereElementIsNotElementType()
                         .Cast<FamilyInstance>()
                         .Where(ele => ele.Name.Contains("Отверстие"))
                         .ToList();
-
-                foreach (FamilyInstance fi in openingInstances)
+                foreach (FamilyInstance openingInstance in openingInstances)
+                
                 {
 
-                    BoundingBoxXYZ elBB = GetSolidOfElement(fi).GetBoundingBox();
-                    XYZ elMaxPoint = elBB.Max;
-                    XYZ elMinPoint = elBB.Min;
-                    Outline outline = new Outline(elMinPoint, elMaxPoint);
+                    Outline outline = new Outline(openingInstance.get_BoundingBox(null).Min, openingInstance.get_BoundingBox(null).Max);
                     BoundingBoxIntersectsFilter filter = new BoundingBoxIntersectsFilter(outline);
-                    List<FamilyInstance> intersectingElements = new FilteredElementCollector(doc, doc.ActiveView.Id)
-                                                    .OfCategory(BuiltInCategory.OST_DataDevices)
-                                                    .WhereElementIsNotElementType()
-                                                    .WherePasses(filter)
-                                                    .Where(ele => ele.Name.Contains("Отверстие"))
-                                                    .Cast<FamilyInstance>()
-                                                    .ToList();
-                    double maxPointU = -1000000;
-                    double maxPointV = -1000000;
-                    double minPointU = 1000000;
-                    double minPointV = 1000000;
-                    double maxX = -1000000;
-                    double maxY = -1000000;
-                    double maxZ = -1000000;
-                    double minX = 1000000;
-                    double minY = 1000000;
-                    double minZ = 1000000;
+                    List<FamilyInstance> intersectedElements = new FilteredElementCollector(doc, doc.ActiveView.Id)
+                        .OfCategory(BuiltInCategory.OST_DataDevices)
+                        .WhereElementIsNotElementType()
+                        .WherePasses(filter)
+                        .Cast<FamilyInstance>()
+                        .Where(ele => ele.Name.Contains("Отверстие"))
+                        .ToList();
 
-                    foreach (FamilyInstance familyInstance in intersectingElements)
+                    List<double> x = new List<double>();
+                    List<double> y = new List<double>();
+                    List<double> z = new List<double>();
+
+                    foreach (FamilyInstance familyInstance in intersectedElements)
                     {
-                        UV maxPoint = GetSolidOfElement(familyInstance).Faces.get_Item(0).GetBoundingBox().Max;
-                        UV minPoint = GetSolidOfElement(familyInstance).Faces.get_Item(0).GetBoundingBox().Min;
-                        if (maxPoint.U > maxPointU) { maxPointU = maxPoint.U; }
-                        if (maxPoint.V > maxPointV) { maxPointV = maxPoint.V; }
-                        if (minPoint.U < minPointU) { minPointU = minPoint.U; }
-                        if (minPoint.V < minPointV) { minPointV = minPoint.V; }
-                        BoundingBoxXYZ familyInstanceBB = GetSolidOfElement(familyInstance).GetBoundingBox();
-                        if (familyInstanceBB.Max.X > maxX) { maxX = familyInstanceBB.Max.X; }
-                        if (familyInstanceBB.Max.Y > maxY) { maxY = familyInstanceBB.Max.Y; }
-                        if (familyInstanceBB.Max.Z > maxZ) { maxZ = familyInstanceBB.Max.Z; }
-                        if (familyInstanceBB.Min.X < minX) { minX = familyInstanceBB.Min.X; }
-                        if (familyInstanceBB.Min.Y < minY) { minY = familyInstanceBB.Min.Y; }
-                        if (familyInstanceBB.Min.Z < minZ) { minZ = familyInstanceBB.Min.Z; }
-                        using (Transaction t = new Transaction(doc, "Удаление старых отверстий"))
-                        {
-                            t.Start();
-                            doc.Delete(familyInstance.Id);
-                            t.Commit();
-                        }
-                        
+
+                        x.Add((familyInstance.Location as LocationPoint).Point.X);
+                        y.Add((familyInstance.Location as LocationPoint).Point.Y);
+                        z.Add((familyInstance.Location as LocationPoint).Point.Z);
+
                     }
-                    double intersectedLength = maxPointV - minPointV;
-                    double intersectedWidth = maxPointU - minPointU;
-                    XYZ intersectedPoint = new XYZ((minX + maxX) / 2, (minY + maxY) / 2, (minZ + maxZ) / 2);
-                    using (Transaction t = new Transaction(doc, "Вставка объединенного отверстия"))
+                    
+                    XYZ intersectedPoint = new XYZ (x.Sum()/x.Count, y.Sum()/y.Count, z.Sum()/z.Count);
+                    
+                    using (Transaction t = new Transaction(doc, "Вставка объединенных отверстий"))
                     {
                         t.Start();
-                        FamilyInstance intersectEl = doc.Create.NewFamilyInstance(intersectedPoint, wallOpeningFamilySymbol[0], intersectedPoint.Normalize(), null, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
+                        ElementTransformUtils.CopyElement(doc, intersectedElements[0].Id, intersectedPoint);
                         t.Commit();
                     }
-
                 }
+
+
+
+                using (Transaction t = new Transaction(doc, "Удаление старых отверстий"))
+                {
+                    foreach (Element element in openingInstances)
+                    {
+                        t.Start();
+                        doc.Delete(element.Id);
+                        t.Commit();
+                    }
+                }
+
 
             }
             return Result.Succeeded;
@@ -292,6 +283,21 @@ namespace GeoAddin
             }
            
             return elementLine;
+        }
+        private static Solid GetSolidFromInstance(FamilyInstance familyInstance)
+        {
+            Solid solid = null;
+            GeometryElement ge = familyInstance.get_Geometry(new Options());
+            foreach (GeometryObject go in ge)
+            {
+                GeometryInstance gi = go as GeometryInstance;
+                foreach (GeometryObject io in gi.GetInstanceGeometry())
+                {
+                    Solid s = io as Solid;
+                    if (s != null) { solid = s; }
+                }
+            }
+            return solid;
         }
     }
 }
