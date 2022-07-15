@@ -38,8 +38,6 @@ namespace GeoAddin
             bool clickedon = win.clickedon;
             bool clickedoff = win.clickedoff;
 
-
-
             while (clickedon == false & clickedoff == false)
             {
                 continue;
@@ -54,6 +52,22 @@ namespace GeoAddin
                 Document linkDoc = null;
 
                 //Взятие исходных данных из окна и запись в основные переменные
+                List<ElementId> createdOpeningInstances = new FilteredElementCollector(doc, doc.ActiveView.Id)
+                        .OfCategory(BuiltInCategory.OST_DataDevices)
+                        .WhereElementIsNotElementType()
+                        .Cast<FamilyInstance>()
+                        .Where(ele => ele.Name.Contains("Отверстие"))
+                        .Where(ele => ele.LookupParameter("Проверено").AsValueString() == "Нет")
+                        .Select(ele => ele.Id)
+                        .ToList();
+                
+                using (Transaction t = new Transaction(doc, "Удаление существующих отверстий"))
+                {
+                    t.Start();
+                    doc.Delete(createdOpeningInstances);
+                    t.Commit();
+                }
+                
                 List<Level> levels = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_Levels).WhereElementIsNotElementType().Cast<Level>().ToList();
                 List<RevitLinkInstance> linkInstances = new FilteredElementCollector(doc).OfClass(typeof(RevitLinkInstance)).Cast<RevitLinkInstance>().ToList();
                 foreach (Level item in levels) { if (item.Name == win.LevelBox.Text) { level = item; } }
@@ -137,122 +151,102 @@ namespace GeoAddin
                             double maxV = bb.Max.V;
                             double minU = bb.Min.U;
                             double minV = bb.Min.V;
-                            double length = (maxV - minV) + openingBoundOffset;
-                            double width = (maxU - minU) + openingBoundOffset;
-                            FamilyInstance el = null;
-                            if (intersectionCurves.Count() > 0)
+                            double length = UnitUtils.ConvertToInternalUnits(Math.Round(UnitUtils.ConvertFromInternalUnits((maxV - minV + openingBoundOffset),UnitTypeId.Millimeters) / 5) * 5, UnitTypeId.Millimeters);
+                            double width = UnitUtils.ConvertToInternalUnits(Math.Round(UnitUtils.ConvertFromInternalUnits((maxU - minU + openingBoundOffset), UnitTypeId.Millimeters) / 5) * 5, UnitTypeId.Millimeters);
+                        FamilyInstance el = null;
+                        
+
+                        if (intersectionCurves.Count() > 0)
 
                             {
-                                using (Transaction t = new Transaction(doc, "Генерация отверстий"))
-                                {
-                                t.Start();
-
+                                
                                         Line intersectionLine = intersectionCurves.First() as Line;
                                         double x = (intersectionLine.GetEndPoint(0).X + intersectionLine.GetEndPoint(1).X) / 2;
                                         double y = (intersectionLine.GetEndPoint(0).Y + intersectionLine.GetEndPoint(1).Y) / 2;
                                         double z = (intersectionLine.GetEndPoint(0).Z + intersectionLine.GetEndPoint(1).Z) / 2;
                                         XYZ locationPoint = new XYZ(x, y, z);
-                                        if (linkElement.Category.Name == "Стены")
+                                        XYZ outlineFirstPoint =  new XYZ(intersectionLine.GetEndPoint(0).X - 0.0001 , intersectionLine.GetEndPoint(0).Y - 0.0001, intersectionLine.GetEndPoint(0).Z - 0.0001);
+                                        XYZ outlineSecondPoint = new XYZ(intersectionLine.GetEndPoint(1).X + 0.0001, intersectionLine.GetEndPoint(1).Y + 0.0001, intersectionLine.GetEndPoint(1).Z + 0.0001);
+
+                                        Outline outline = new Outline(outlineFirstPoint, outlineSecondPoint);
+                                        BoundingBoxIntersectsFilter filter = new BoundingBoxIntersectsFilter(outline);
+                                        List<FamilyInstance> intersectedElements = new FilteredElementCollector(doc, doc.ActiveView.Id)
+                                                                                        .OfCategory(BuiltInCategory.OST_DataDevices)
+                                                                                        .WhereElementIsNotElementType()
+                                                                                        .WherePasses(filter)
+                                                                                        .Cast<FamilyInstance>()
+                                                                                        .Where(ele => ele.Name.Contains("Отверстие"))
+                                                                                        .ToList();
+
+                            if (intersectedElements.Count == 0)
+                            {
+                                if (linkElement.Category.Name == "Стены")
+                                {
+
+                                    using (Transaction t = new Transaction(doc, "Генерация отверстия"))
+                                    {
+                                        t.Start();
+                                        el = doc.Create.NewFamilyInstance(locationPoint, wallOpeningFamilySymbol[0], line.Direction, null, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
+                                        el.LookupParameter("ADSK_Отверстие_Функция").Set(openingFunc);
+                                        t.Commit();
+                                    }
+
+                                    Wall twall = linkElement as Wall;
+                                    if (twall.Orientation.Y == 1 | twall.Orientation.Y == -1)
+                                    {
+                                        using (Transaction t = new Transaction(doc, "Образмеривание"))
                                         {
-
-
-                                            el = doc.Create.NewFamilyInstance(locationPoint, wallOpeningFamilySymbol[0], line.Direction, null, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
-                                            el.LookupParameter("ADSK_Отверстие_Функция").Set(openingFunc);
-                                            Wall twall = linkElement as Wall;
-                                            if (twall.Orientation.Y == 1 | twall.Orientation.Y == -1)
-                                            {
-                                                el.LookupParameter("ADSK_Размер_Длина").Set(width);
-                                                el.LookupParameter("ADSK_Размер_Ширина").Set(length);
-                                                el.LookupParameter("ADSK_Размер_Толщина").Set(intersectionLine.ApproximateLength);
-
-                                        
-                                            }
-
-                                            else
-                                            {
-
-                                                el.LookupParameter("ADSK_Размер_Длина").Set(length);
-                                                el.LookupParameter("ADSK_Размер_Ширина").Set(width);
-                                                el.LookupParameter("ADSK_Размер_Толщина").Set(intersectionLine.ApproximateLength);
-
-                                            }
-                                        }
-
-                                        else
-                                        {
-                                            el = doc.Create.NewFamilyInstance(locationPoint, floorOpeningFamilySymbol[0], line.Direction, null, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
-                                            el.LookupParameter("ADSK_Отверстие_Функция").Set(openingFunc);
+                                            t.Start();
                                             el.LookupParameter("ADSK_Размер_Длина").Set(width);
                                             el.LookupParameter("ADSK_Размер_Ширина").Set(length);
                                             el.LookupParameter("ADSK_Размер_Толщина").Set(intersectionLine.ApproximateLength);
+                                            t.Commit();
                                         }
-                                t.Commit();
+
+                                        CombineOpenings(el, wallOpeningFamilySymbol[0], line, intersectionLine, "first", openingFunc);
+
+                                    }
+
+                                    else
+                                    {
+                                        using (Transaction t = new Transaction(doc, "Образмеривание"))
+                                        {
+                                            t.Start();
+                                            el.LookupParameter("ADSK_Размер_Длина").Set(length);
+                                            el.LookupParameter("ADSK_Размер_Ширина").Set(width);
+                                            el.LookupParameter("ADSK_Размер_Толщина").Set(intersectionLine.ApproximateLength);
+                                            t.Commit();
+                                        }
+
+                                        CombineOpenings(el, wallOpeningFamilySymbol[0], line, intersectionLine, "second", openingFunc);
+
+                                    }
                                 }
+
+                                else
+                                {
+                                    using (Transaction t = new Transaction(doc, "Образмеривание"))
+                                    {
+                                        t.Start();
+                                        el = doc.Create.NewFamilyInstance(locationPoint, floorOpeningFamilySymbol[0], line.Direction, null, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
+                                        el.LookupParameter("ADSK_Отверстие_Функция").Set(openingFunc);
+                                        el.LookupParameter("ADSK_Размер_Длина").Set(width);
+                                        el.LookupParameter("ADSK_Размер_Ширина").Set(length);
+                                        el.LookupParameter("ADSK_Размер_Толщина").Set(intersectionLine.ApproximateLength);
+                                        t.Commit();
+                                    }
+
+                                    CombineOpenings(el, floorOpeningFamilySymbol[0], line, intersectionLine, null, openingFunc);
+
+                                }
+                            }
                                 
                             }
                        
                    }
                     
                 }
-
-                //Поиск отверстий и объединение
                 
-                List<FamilyInstance> openingInstances = new FilteredElementCollector(doc, doc.ActiveView.Id)
-                        .OfCategory(BuiltInCategory.OST_DataDevices)
-                        .WhereElementIsNotElementType()
-                        .Cast<FamilyInstance>()
-                        .Where(ele => ele.Name.Contains("Отверстие"))
-                        .ToList();
-                foreach (FamilyInstance openingInstance in openingInstances)
-                
-                {
-
-                    Outline outline = new Outline(openingInstance.get_BoundingBox(null).Min, openingInstance.get_BoundingBox(null).Max);
-                    BoundingBoxIntersectsFilter filter = new BoundingBoxIntersectsFilter(outline);
-                    List<FamilyInstance> intersectedElements = new FilteredElementCollector(doc, doc.ActiveView.Id)
-                        .OfCategory(BuiltInCategory.OST_DataDevices)
-                        .WhereElementIsNotElementType()
-                        .WherePasses(filter)
-                        .Cast<FamilyInstance>()
-                        .Where(ele => ele.Name.Contains("Отверстие"))
-                        .ToList();
-
-                    List<double> x = new List<double>();
-                    List<double> y = new List<double>();
-                    List<double> z = new List<double>();
-
-                    foreach (FamilyInstance familyInstance in intersectedElements)
-                    {
-
-                        x.Add((familyInstance.Location as LocationPoint).Point.X);
-                        y.Add((familyInstance.Location as LocationPoint).Point.Y);
-                        z.Add((familyInstance.Location as LocationPoint).Point.Z);
-
-                    }
-                    
-                    XYZ intersectedPoint = new XYZ (x.Sum()/x.Count, y.Sum()/y.Count, z.Sum()/z.Count);
-                    
-                    using (Transaction t = new Transaction(doc, "Вставка объединенных отверстий"))
-                    {
-                        t.Start();
-                        ElementTransformUtils.CopyElement(doc, intersectedElements[0].Id, intersectedPoint);
-                        t.Commit();
-                    }
-                }
-
-
-
-                using (Transaction t = new Transaction(doc, "Удаление старых отверстий"))
-                {
-                    foreach (Element element in openingInstances)
-                    {
-                        t.Start();
-                        doc.Delete(element.Id);
-                        t.Commit();
-                    }
-                }
-
-
             }
             return Result.Succeeded;
         }
@@ -298,6 +292,98 @@ namespace GeoAddin
                 }
             }
             return solid;
+        }
+
+        private static void CombineOpenings(FamilyInstance CurrentOpening, FamilySymbol fS, Line line, Line thickness, string orientation, string openingFunc)
+        {
+            List<FamilyInstance> openingInstances = new FilteredElementCollector(doc, doc.ActiveView.Id)
+                        .OfCategory(BuiltInCategory.OST_DataDevices)
+                        .WhereElementIsNotElementType()
+                        .Cast<FamilyInstance>()
+                        .Where(ele => ele.Name.Contains("Отверстие"))
+                        .ToList();
+            if ((openingInstances.Count > 1) && (openingInstances != null))
+            {
+                Outline outline = new Outline(CurrentOpening.get_BoundingBox(null).Min, CurrentOpening.get_BoundingBox(null).Max);
+                BoundingBoxIntersectsFilter filter = new BoundingBoxIntersectsFilter(outline);
+                List<FamilyInstance> intersectedElements = new FilteredElementCollector(doc, doc.ActiveView.Id)
+                    .OfCategory(BuiltInCategory.OST_DataDevices)
+                    .WhereElementIsNotElementType()
+                    .WherePasses(filter)
+                    .Cast<FamilyInstance>()
+                    .Where(ele => ele.Name.Contains("Отверстие"))
+                    .ToList();
+                if ((intersectedElements.Count > 1) && (intersectedElements != null))
+                {
+                    List<double> x = new List<double>();
+                    List<double> y = new List<double>();
+                    List<double> z = new List<double>();
+                    double maxX = -100000;
+                    double maxY = -100000;
+                    double maxZ = -100000;
+                    double minX = 100000;
+                    double minY = 100000;
+                    double minZ = 100000;
+                    double length = 0;
+                    double width = 0;
+
+                    foreach (FamilyInstance familyInstance in intersectedElements)
+                    {
+
+                        x.Add((familyInstance.Location as LocationPoint).Point.X);
+                        y.Add((familyInstance.Location as LocationPoint).Point.Y);
+                        z.Add((familyInstance.Location as LocationPoint).Point.Z);
+                        
+                        if (familyInstance.get_BoundingBox(null).Max.X > maxX) { maxX = familyInstance.get_BoundingBox(null).Max.X; }
+                        if (familyInstance.get_BoundingBox(null).Max.Y > maxY) { maxY = familyInstance.get_BoundingBox(null).Max.Y; }
+                        if (familyInstance.get_BoundingBox(null).Max.Z > maxZ) { maxZ = familyInstance.get_BoundingBox(null).Max.Z; }
+                        if (familyInstance.get_BoundingBox(null).Min.X < minX) { minX = familyInstance.get_BoundingBox(null).Min.X; }
+                        if (familyInstance.get_BoundingBox(null).Min.Y < minY) { minY = familyInstance.get_BoundingBox(null).Min.Y; }
+                        if (familyInstance.get_BoundingBox(null).Min.Z < minZ) { minZ = familyInstance.get_BoundingBox(null).Min.Z; }
+
+
+
+
+                    }
+                    if (orientation == "first")
+                    {
+                        
+                        length = UnitUtils.ConvertToInternalUnits(Math.Round(UnitUtils.ConvertFromInternalUnits((maxZ - minZ), UnitTypeId.Millimeters) / 5) * 5, UnitTypeId.Millimeters);
+                        width = UnitUtils.ConvertToInternalUnits(Math.Round(UnitUtils.ConvertFromInternalUnits((maxX - minX), UnitTypeId.Millimeters) / 5) * 5, UnitTypeId.Millimeters);
+                    }
+                   
+                    else if (orientation == "second")
+                    {
+                        length = UnitUtils.ConvertToInternalUnits(Math.Round(UnitUtils.ConvertFromInternalUnits((maxZ - minZ), UnitTypeId.Millimeters) / 5) * 5, UnitTypeId.Millimeters);
+                        width = UnitUtils.ConvertToInternalUnits(Math.Round(UnitUtils.ConvertFromInternalUnits((maxY - minY), UnitTypeId.Millimeters) / 5) * 5, UnitTypeId.Millimeters);
+                    }
+                    else
+                    {
+                        length = UnitUtils.ConvertToInternalUnits(Math.Round(UnitUtils.ConvertFromInternalUnits((maxX - minX), UnitTypeId.Millimeters) / 5) * 5, UnitTypeId.Millimeters);
+                        width = UnitUtils.ConvertToInternalUnits(Math.Round(UnitUtils.ConvertFromInternalUnits((maxY - minY), UnitTypeId.Millimeters) / 5) * 5, UnitTypeId.Millimeters);
+                    }
+
+
+                    XYZ intersectedPoint = new XYZ(x.Sum() / x.Count, y.Sum() / y.Count, z.Sum() / z.Count);
+
+                    using (Transaction t = new Transaction(doc, "Вставка объединенного отверстия"))
+                    {
+                        t.Start();
+                        FamilyInstance newElement = doc.Create.NewFamilyInstance(intersectedPoint, fS, line.Direction, null, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
+                        newElement.LookupParameter("ADSK_Размер_Длина").Set(length);
+                        newElement.LookupParameter("ADSK_Размер_Ширина").Set(width);
+                        newElement.LookupParameter("ADSK_Размер_Толщина").Set(thickness.ApproximateLength);
+                        newElement.LookupParameter("ADSK_Отверстие_Функция").Set(openingFunc);
+                        foreach (FamilyInstance familyInstance in intersectedElements)
+                        {
+                            doc.Delete(familyInstance.Id);
+                        }
+
+                        t.Commit();
+                    }
+                }
+
+            }
         }
     }
 }
