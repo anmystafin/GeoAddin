@@ -241,7 +241,7 @@ namespace GeoAddin
                                 }
                             }
                                 
-                            }
+                        }
                        
                    }
                     
@@ -278,22 +278,6 @@ namespace GeoAddin
            
             return elementLine;
         }
-        private static Solid GetSolidFromInstance(FamilyInstance familyInstance)
-        {
-            Solid solid = null;
-            GeometryElement ge = familyInstance.get_Geometry(new Options());
-            foreach (GeometryObject go in ge)
-            {
-                GeometryInstance gi = go as GeometryInstance;
-                foreach (GeometryObject io in gi.GetInstanceGeometry())
-                {
-                    Solid s = io as Solid;
-                    if (s != null) { solid = s; }
-                }
-            }
-            return solid;
-        }
-
         private static void CombineOpenings(FamilyInstance CurrentOpening, FamilySymbol fS, Line line, string orientation, string openingFunc)
         {
             List<FamilyInstance> openingInstances = new FilteredElementCollector(doc, doc.ActiveView.Id)
