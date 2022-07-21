@@ -1,0 +1,18 @@
+﻿<Window x:Name="OpeningCopyingWindow" x:Class="GeoAddin.OpeningCopyWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:GeoAddin"
+        mc:Ignorable="d"
+        Title="Генерация помещений" Height="200" Width="350" WindowStyle="None" ResizeMode="NoResize">
+    <Grid Margin="5,5,5,5">
+        <Label Content="Выберите связанный файл для копирования:" HorizontalAlignment="Left" Margin="5,5,0,0" VerticalAlignment="Top"/>
+        <Button Content="Запуск" HorizontalAlignment="Left" Margin="10,160,0,0" VerticalAlignment="Top" Click="But_Click_On" RenderTransformOrigin="0.57,1.683"/>
+        <Button Content="Отмена" HorizontalAlignment="Left" Margin="284,160,0,0" VerticalAlignment="Top" Click="But_Click_Off"/>
+        <Label Content="Связанный файл" HorizontalAlignment="Left" Margin="5,49,0,0" VerticalAlignment="Top"/>
+        <ComboBox x:Name="LinkInstance" HorizontalAlignment="Left" Margin="112,50,0,0" VerticalAlignment="Top" Width="120"/>
+        
+
+    </Grid>
+</Window>

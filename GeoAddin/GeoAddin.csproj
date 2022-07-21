@@ -69,8 +69,13 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Openings_Commands\OpeningCopying.cs" />
+    <Compile Include="Openings_Commands\OpeningIDGenerating.cs" />
     <Compile Include="Openings_Commands\OpeningGenerating.cs" />
     <Compile Include="Class.cs" />
+    <Compile Include="Openings_Windows\OpeningCopyWindow.xaml.cs">
+      <DependentUpon>OpeningCopyWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Openings_Windows\OpeningGenWindow.xaml.cs">
       <DependentUpon>OpeningGenWindow.xaml</DependentUpon>
     </Compile>
@@ -99,6 +104,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="GeoAddin.addin" />
+    <None Include="Resources\CM_OpeningMEP.png" />
     <None Include="Resources\WindowFilling.png" />
     <None Include="Resources\DetachFilePic.png" />
     <None Include="Resources\OpeningPic.png" />
@@ -118,6 +124,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Common_Windows\DetachFileWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Openings_Windows\OpeningCopyWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

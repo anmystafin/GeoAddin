@@ -153,10 +153,10 @@ namespace GeoAddin
                             double minV = bb.Min.V;
                             double length = UnitUtils.ConvertToInternalUnits(Math.Round(UnitUtils.ConvertFromInternalUnits((maxV - minV + openingBoundOffset),UnitTypeId.Millimeters) / 5) * 5, UnitTypeId.Millimeters);
                             double width = UnitUtils.ConvertToInternalUnits(Math.Round(UnitUtils.ConvertFromInternalUnits((maxU - minU + openingBoundOffset), UnitTypeId.Millimeters) / 5) * 5, UnitTypeId.Millimeters);
-                        FamilyInstance el = null;
-                        
+                            FamilyInstance el = null;
 
-                        if (intersectionCurves.Count() > 0)
+
+                        if (intersectionCurves.Count() > 0 )
 
                             {
                                 
@@ -165,8 +165,8 @@ namespace GeoAddin
                                         double y = (intersectionLine.GetEndPoint(0).Y + intersectionLine.GetEndPoint(1).Y) / 2;
                                         double z = (intersectionLine.GetEndPoint(0).Z + intersectionLine.GetEndPoint(1).Z) / 2;
                                         XYZ locationPoint = new XYZ(x, y, z);
-                                        XYZ outlineFirstPoint =  new XYZ(intersectionLine.GetEndPoint(0).X - 0.0001 , intersectionLine.GetEndPoint(0).Y - 0.0001, intersectionLine.GetEndPoint(0).Z - 0.0001);
-                                        XYZ outlineSecondPoint = new XYZ(intersectionLine.GetEndPoint(1).X + 0.0001, intersectionLine.GetEndPoint(1).Y + 0.0001, intersectionLine.GetEndPoint(1).Z + 0.0001);
+                                        XYZ outlineFirstPoint =  new XYZ(locationPoint.X - 0.0001 , locationPoint.Y - 0.0001, locationPoint.Z - 0.0001);
+                                        XYZ outlineSecondPoint = new XYZ(locationPoint.X + 0.0001, locationPoint.Y + 0.0001, locationPoint.Z + 0.0001);
 
                                         Outline outline = new Outline(outlineFirstPoint, outlineSecondPoint);
                                         BoundingBoxIntersectsFilter filter = new BoundingBoxIntersectsFilter(outline);
@@ -203,7 +203,7 @@ namespace GeoAddin
                                             t.Commit();
                                         }
 
-                                        CombineOpenings(el, wallOpeningFamilySymbol[0], line, intersectionLine, "first", openingFunc);
+                                        CombineOpenings(el, wallOpeningFamilySymbol[0], line,  "first", openingFunc);
 
                                     }
 
@@ -218,7 +218,7 @@ namespace GeoAddin
                                             t.Commit();
                                         }
 
-                                        CombineOpenings(el, wallOpeningFamilySymbol[0], line, intersectionLine, "second", openingFunc);
+                                        CombineOpenings(el, wallOpeningFamilySymbol[0], line, "second", openingFunc);
 
                                     }
                                 }
@@ -236,7 +236,7 @@ namespace GeoAddin
                                         t.Commit();
                                     }
 
-                                    CombineOpenings(el, floorOpeningFamilySymbol[0], line, intersectionLine, null, openingFunc);
+                                    CombineOpenings(el, floorOpeningFamilySymbol[0], line,  null, openingFunc);
 
                                 }
                             }
@@ -294,7 +294,7 @@ namespace GeoAddin
             return solid;
         }
 
-        private static void CombineOpenings(FamilyInstance CurrentOpening, FamilySymbol fS, Line line, Line thickness, string orientation, string openingFunc)
+        private static void CombineOpenings(FamilyInstance CurrentOpening, FamilySymbol fS, Line line, string orientation, string openingFunc)
         {
             List<FamilyInstance> openingInstances = new FilteredElementCollector(doc, doc.ActiveView.Id)
                         .OfCategory(BuiltInCategory.OST_DataDevices)
@@ -315,9 +315,9 @@ namespace GeoAddin
                     .ToList();
                 if ((intersectedElements.Count > 1) && (intersectedElements != null))
                 {
-                    List<double> x = new List<double>();
+                    /*List<double> x = new List<double>();
                     List<double> y = new List<double>();
-                    List<double> z = new List<double>();
+                    List<double> z = new List<double>();*/
                     double maxX = -100000;
                     double maxY = -100000;
                     double maxZ = -100000;
@@ -326,14 +326,11 @@ namespace GeoAddin
                     double minZ = 100000;
                     double length = 0;
                     double width = 0;
+                    double thick = 0;
 
                     foreach (FamilyInstance familyInstance in intersectedElements)
                     {
 
-                        x.Add((familyInstance.Location as LocationPoint).Point.X);
-                        y.Add((familyInstance.Location as LocationPoint).Point.Y);
-                        z.Add((familyInstance.Location as LocationPoint).Point.Z);
-                        
                         if (familyInstance.get_BoundingBox(null).Max.X > maxX) { maxX = familyInstance.get_BoundingBox(null).Max.X; }
                         if (familyInstance.get_BoundingBox(null).Max.Y > maxY) { maxY = familyInstance.get_BoundingBox(null).Max.Y; }
                         if (familyInstance.get_BoundingBox(null).Max.Z > maxZ) { maxZ = familyInstance.get_BoundingBox(null).Max.Z; }
@@ -341,30 +338,29 @@ namespace GeoAddin
                         if (familyInstance.get_BoundingBox(null).Min.Y < minY) { minY = familyInstance.get_BoundingBox(null).Min.Y; }
                         if (familyInstance.get_BoundingBox(null).Min.Z < minZ) { minZ = familyInstance.get_BoundingBox(null).Min.Z; }
 
-
-
-
                     }
                     if (orientation == "first")
                     {
                         
                         length = UnitUtils.ConvertToInternalUnits(Math.Round(UnitUtils.ConvertFromInternalUnits((maxZ - minZ), UnitTypeId.Millimeters) / 5) * 5, UnitTypeId.Millimeters);
                         width = UnitUtils.ConvertToInternalUnits(Math.Round(UnitUtils.ConvertFromInternalUnits((maxX - minX), UnitTypeId.Millimeters) / 5) * 5, UnitTypeId.Millimeters);
+                        thick = UnitUtils.ConvertToInternalUnits(Math.Round(UnitUtils.ConvertFromInternalUnits((maxY - minY), UnitTypeId.Millimeters) / 5) * 5, UnitTypeId.Millimeters);
                     }
                    
                     else if (orientation == "second")
                     {
                         length = UnitUtils.ConvertToInternalUnits(Math.Round(UnitUtils.ConvertFromInternalUnits((maxZ - minZ), UnitTypeId.Millimeters) / 5) * 5, UnitTypeId.Millimeters);
                         width = UnitUtils.ConvertToInternalUnits(Math.Round(UnitUtils.ConvertFromInternalUnits((maxY - minY), UnitTypeId.Millimeters) / 5) * 5, UnitTypeId.Millimeters);
+                        thick = UnitUtils.ConvertToInternalUnits(Math.Round(UnitUtils.ConvertFromInternalUnits((maxX - minX), UnitTypeId.Millimeters) / 5) * 5, UnitTypeId.Millimeters);
                     }
                     else
                     {
                         length = UnitUtils.ConvertToInternalUnits(Math.Round(UnitUtils.ConvertFromInternalUnits((maxX - minX), UnitTypeId.Millimeters) / 5) * 5, UnitTypeId.Millimeters);
                         width = UnitUtils.ConvertToInternalUnits(Math.Round(UnitUtils.ConvertFromInternalUnits((maxY - minY), UnitTypeId.Millimeters) / 5) * 5, UnitTypeId.Millimeters);
+                        thick = UnitUtils.ConvertToInternalUnits(Math.Round(UnitUtils.ConvertFromInternalUnits((maxZ - minZ), UnitTypeId.Millimeters) / 5) * 5, UnitTypeId.Millimeters);
                     }
+                    XYZ intersectedPoint = new XYZ((maxX+minX)/2, (maxY + minY) / 2, (maxZ + minZ) / 2);
 
-
-                    XYZ intersectedPoint = new XYZ(x.Sum() / x.Count, y.Sum() / y.Count, z.Sum() / z.Count);
 
                     using (Transaction t = new Transaction(doc, "Вставка объединенного отверстия"))
                     {
@@ -372,7 +368,7 @@ namespace GeoAddin
                         FamilyInstance newElement = doc.Create.NewFamilyInstance(intersectedPoint, fS, line.Direction, null, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
                         newElement.LookupParameter("ADSK_Размер_Длина").Set(length);
                         newElement.LookupParameter("ADSK_Размер_Ширина").Set(width);
-                        newElement.LookupParameter("ADSK_Размер_Толщина").Set(thickness.ApproximateLength);
+                        newElement.LookupParameter("ADSK_Размер_Толщина").Set(thick);
                         newElement.LookupParameter("ADSK_Отверстие_Функция").Set(openingFunc);
                         foreach (FamilyInstance familyInstance in intersectedElements)
                         {

@@ -73,6 +73,16 @@ namespace GeoAddin.Properties {
         /// <summary>
         ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap CM_OpeningMEP {
+            get {
+                object obj = ResourceManager.GetObject("CM_OpeningMEP", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap DetachFilePic {
             get {
                 object obj = ResourceManager.GetObject("DetachFilePic", resourceCulture);
